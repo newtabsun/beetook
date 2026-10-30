@@ -1,0 +1,4 @@
+{
+  "platforms": ["android", "web"],
+  "android": { "modules": ["expo.modules.gpupixelcamera.GpuPixelCameraModule"] }
+}

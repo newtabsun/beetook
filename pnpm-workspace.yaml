@@ -1,0 +1,5 @@
+nodeLinker: hoisted
+onlyBuiltDependencies:
+  - '@shopify/react-native-skia'
+allowBuilds:
+  '@shopify/react-native-skia': true

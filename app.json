@@ -1,0 +1,115 @@
+{
+  "expo": {
+    "name": "Bee Took",
+    "slug": "beetook",
+    "owner": "beetook1",
+    "extra": {
+      "eas": {
+        "projectId": "ab096acd-0d90-490c-9a8a-c74010d5167e"
+      }
+    },
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "platforms": [
+      "android",
+      "ios",
+      "web"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bitcode": false
+    },
+    "android": {
+      "package": "com.beetook.app",
+      "versionCode": 45,
+      "softwareKeyboardLayoutMode": "resize",
+      "adaptiveIcon": {
+        "backgroundColor": "#000000",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "backgroundColor": "#000000",
+      "splash": {
+        "image": "./assets/splash-blank.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#000000"
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.WAKE_LOCK",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_AUDIO",
+        "com.android.vending.BILLING",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.INTERNET",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.BLUETOOTH"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "./modules/gpupixel-camera/plugin/withGpuPixel.js",
+      "expo-audio",
+      "expo-asset",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#000000",
+          "image": "./assets/splash-blank.png",
+          "imageWidth": 1,
+          "resizeMode": "contain",
+          "dark": {
+            "backgroundColor": "#000000",
+            "image": "./assets/splash-blank.png"
+          },
+          "android": {
+            "backgroundColor": "#000000",
+            "image": "./assets/splash-blank.png",
+            "imageWidth": 1
+          }
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "savePhotosPermission": "Allow Bee Took to save downloaded videos to your gallery.",
+          "isAccessMediaLocationEnabled": false
+        }
+      ],
+      "expo-iap",
+      [
+        "@livekit/react-native-expo-plugin",
+        {
+          "android": {
+            "audioType": "communication"
+          }
+        }
+      ],
+      "@config-plugins/react-native-webrtc"
+    ],
+    "backgroundColor": "#000000",
+    "splash": {
+      "image": "./assets/splash-blank.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    }
+  }
+}

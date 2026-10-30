@@ -1,0 +1,1478 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-white select-none">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Dual Velocity Drag Racing - Championship</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,600;0,700;1,700&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Chakra Petch', sans-serif;
+      touch-action: manipulation;
+      overflow: hidden;
+    }
+    .font-hud {
+      font-family: 'Orbitron', monospace;
+    }
+    .btn-active:active {
+      transform: scale(0.95);
+    }
+  </style>
+</head>
+<body class="h-full w-full flex flex-col items-center justify-center p-0 m-0 bg-neutral-950 overflow-hidden">
+
+  <!-- Main Game Frame -->
+  <div class="relative w-full h-full max-w-xl mx-auto flex flex-col justify-between overflow-hidden bg-zinc-950 shadow-2xl border-x border-zinc-800">
+
+    <!-- TOP HUD: Dual Competitor KM, Speed, Centered Leader & Race Timer -->
+    <header class="relative z-20 w-full px-3 py-2 bg-gradient-to-b from-black/95 via-zinc-900/90 to-transparent backdrop-blur-md border-b border-zinc-800/80">
+      
+      <!-- Top Bar: Timer (Left), LEADER (CENTER), Pot Display (Right) -->
+      <div class="relative flex items-center justify-between mb-1.5 px-1 min-h-[30px]">
+        <!-- LEFT: Race Timer -->
+        <div class="flex items-center space-x-1.5 bg-zinc-900/90 px-2.5 py-1 rounded-full border border-zinc-700 shadow">
+          <span class="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">TIME:</span>
+          <span id="raceTimerDisplay" class="text-xs font-hud font-black text-amber-400 tracking-widest">02:00</span>
+        </div>
+
+        <!-- CENTER: LEADER BANNER (EXACT MIDDLE POSITION) -->
+        <div class="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
+          <span id="leadBanner" class="text-[10px] font-bold uppercase tracking-wider px-3.5 py-1 rounded-full bg-zinc-800/95 text-zinc-300 border border-zinc-700 shadow-lg whitespace-nowrap">
+            RACE READY
+          </span>
+        </div>
+
+        <!-- RIGHT: Total Prize Pot Badge -->
+        <div class="flex items-center space-x-1.5 bg-amber-950/70 px-2.5 py-1 rounded-full border border-amber-500/40 shadow">
+          <span class="text-[9px] text-amber-400 font-bold uppercase tracking-wider">POT:</span>
+          <span id="hudPotDisplay" class="text-xs font-mono font-black text-amber-300">0</span>
+          <span class="text-[10px]">🪙</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2">
+
+        <!-- Left Competitor (Player 1) -->
+        <div class="p-2 rounded-xl bg-cyan-950/40 border border-cyan-500/30 flex flex-col justify-between">
+          <div class="flex items-center justify-between border-b border-cyan-500/20 pb-1">
+            <div class="flex items-center space-x-1.5 overflow-hidden">
+              <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]"></span>
+              <span id="p1NameDisplay" class="text-xs font-bold text-cyan-300 truncate max-w-[100px]">PLAYER 1</span>
+            </div>
+            <span class="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">LANE 1</span>
+          </div>
+
+          <div class="flex items-baseline justify-between mt-1">
+            <div>
+              <span class="text-[9px] uppercase tracking-wider text-zinc-400 block">SPEED</span>
+              <span id="p1Speed" class="text-xl font-hud font-black text-cyan-400">0</span>
+              <span class="text-[10px] text-zinc-400">KM/H</span>
+            </div>
+            <div class="text-right">
+              <span class="text-[9px] uppercase tracking-wider text-zinc-400 block">DISTANCE</span>
+              <span id="p1Distance" class="text-lg font-hud font-bold text-white">0.000</span>
+              <span class="text-[10px] text-cyan-300 font-semibold">KM</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Competitor (Player 2) -->
+        <div class="p-2 rounded-xl bg-amber-950/40 border border-amber-500/30 flex flex-col justify-between">
+          <div class="flex items-center justify-between border-b border-amber-500/20 pb-1">
+            <div class="flex items-center space-x-1.5 overflow-hidden">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]"></span>
+              <span id="p2NameDisplay" class="text-xs font-bold text-amber-300 truncate max-w-[100px]">PLAYER 2</span>
+            </div>
+            <span class="text-[10px] font-bold text-amber-400 uppercase tracking-wider">LANE 2</span>
+          </div>
+
+          <div class="flex items-baseline justify-between mt-1">
+            <div>
+              <span class="text-[9px] uppercase tracking-wider text-zinc-400 block">SPEED</span>
+              <span id="p2Speed" class="text-xl font-hud font-black text-amber-400">0</span>
+              <span class="text-[10px] text-zinc-400">KM/H</span>
+            </div>
+            <div class="text-right">
+              <span class="text-[9px] uppercase tracking-wider text-zinc-400 block">DISTANCE</span>
+              <span id="p2Distance" class="text-lg font-hud font-bold text-white">0.000</span>
+              <span class="text-[10px] text-amber-300 font-semibold">KM</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- Canvas Simulation Area -->
+    <div class="relative flex-1 w-full overflow-hidden">
+      <canvas id="gameCanvas" class="w-full h-full block bg-zinc-950"></canvas>
+    </div>
+
+    <!-- BOTTOM CONTROLS: Left (P1) and Right (P2) Gas & Brake Panels -->
+    <footer class="relative z-20 w-full px-2 py-2 bg-gradient-to-t from-black via-zinc-950/95 to-zinc-950/80 backdrop-blur-lg border-t border-zinc-800">
+      <div class="grid grid-cols-2 gap-2">
+
+        <!-- ================= LEFT SIDE CONTROLS (PLAYER 1) ================= -->
+        <div class="p-1.5 rounded-2xl bg-zinc-900/90 border border-cyan-900/60 shadow-lg flex flex-col gap-1.5">
+          <div class="flex items-center justify-between px-1">
+            <span class="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">PLAYER 1 CONTROLS</span>
+            <span class="text-[9px] text-zinc-400">LANE 1</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-1.5">
+            <!-- P1 BRAKE CARD -->
+            <div class="flex flex-col bg-zinc-950/80 p-1.5 rounded-xl border border-rose-900/50">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold text-rose-400 uppercase">BRAKE</span>
+                <span class="text-[9px] text-zinc-400">-5</span>
+              </div>
+              <div class="flex items-center justify-between my-1">
+                <button type="button" onclick="openDepositModal('p1_brake', 'PLAYER 1 - BRAKE')" class="btn-active w-5 h-5 rounded-md bg-rose-600 hover:bg-rose-500 text-white font-black text-xs flex items-center justify-center shadow" title="Deposit Coins">
+                  +
+                </button>
+                <div class="flex items-center space-x-1">
+                  <span class="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span>
+                  <span id="p1BrakeCoins" class="text-xs font-mono font-bold text-amber-300">50</span>
+                </div>
+              </div>
+              <button id="p1BtnBrake" type="button" class="btn-active w-full py-2.5 rounded-lg bg-zinc-900 active:bg-rose-600 border border-rose-500/50 text-rose-400 active:text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1 shadow">
+                <span>🛑</span>
+                <span>BRAKE</span>
+              </button>
+            </div>
+
+            <!-- P1 GAS CARD -->
+            <div class="flex flex-col bg-zinc-950/80 p-1.5 rounded-xl border border-cyan-900/50">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold text-cyan-400 uppercase">GAS</span>
+                <span class="text-[9px] text-zinc-400">-10</span>
+              </div>
+              <div class="flex items-center justify-between my-1">
+                <button type="button" onclick="openDepositModal('p1_gas', 'PLAYER 1 - GAS')" class="btn-active w-5 h-5 rounded-md bg-cyan-600 hover:bg-cyan-500 text-white font-black text-xs flex items-center justify-center shadow" title="Deposit Coins">
+                  +
+                </button>
+                <div class="flex items-center space-x-1">
+                  <span class="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span>
+                  <span id="p1GasCoins" class="text-xs font-mono font-bold text-amber-300">100</span>
+                </div>
+              </div>
+              <button id="p1BtnGas" type="button" class="btn-active w-full py-2.5 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 active:from-cyan-500 active:to-blue-500 border border-cyan-400 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1 shadow">
+                <span>⚡</span>
+                <span>GAS</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= RIGHT SIDE CONTROLS (PLAYER 2) ================= -->
+        <div class="p-1.5 rounded-2xl bg-zinc-900/90 border border-amber-900/60 shadow-lg flex flex-col gap-1.5">
+          <div class="flex items-center justify-between px-1">
+            <span class="text-[10px] font-bold text-amber-400 uppercase tracking-wider">PLAYER 2 CONTROLS</span>
+            <span class="text-[9px] text-zinc-400">LANE 2</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-1.5">
+            <!-- P2 BRAKE CARD -->
+            <div class="flex flex-col bg-zinc-950/80 p-1.5 rounded-xl border border-rose-900/50">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold text-rose-400 uppercase">BRAKE</span>
+                <span class="text-[9px] text-zinc-400">-5</span>
+              </div>
+              <div class="flex items-center justify-between my-1">
+                <button type="button" onclick="openDepositModal('p2_brake', 'PLAYER 2 - BRAKE')" class="btn-active w-5 h-5 rounded-md bg-rose-600 hover:bg-rose-500 text-white font-black text-xs flex items-center justify-center shadow" title="Deposit Coins">
+                  +
+                </button>
+                <div class="flex items-center space-x-1">
+                  <span class="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span>
+                  <span id="p2BrakeCoins" class="text-xs font-mono font-bold text-amber-300">50</span>
+                </div>
+              </div>
+              <button id="p2BtnBrake" type="button" class="btn-active w-full py-2.5 rounded-lg bg-zinc-900 active:bg-rose-600 border border-rose-500/50 text-rose-400 active:text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1 shadow">
+                <span>🛑</span>
+                <span>BRAKE</span>
+              </button>
+            </div>
+
+            <!-- P2 GAS CARD -->
+            <div class="flex flex-col bg-zinc-950/80 p-1.5 rounded-xl border border-amber-900/50">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold text-amber-400 uppercase">GAS</span>
+                <span class="text-[9px] text-zinc-400">-10</span>
+              </div>
+              <div class="flex items-center justify-between my-1">
+                <button type="button" onclick="openDepositModal('p2_gas', 'PLAYER 2 - GAS')" class="btn-active w-5 h-5 rounded-md bg-amber-600 hover:bg-amber-500 text-white font-black text-xs flex items-center justify-center shadow" title="Deposit Coins">
+                  +
+                </button>
+                <div class="flex items-center space-x-1">
+                  <span class="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span>
+                  <span id="p2GasCoins" class="text-xs font-mono font-bold text-amber-300">100</span>
+                </div>
+              </div>
+              <button id="p2BtnGas" type="button" class="btn-active w-full py-2.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 active:from-amber-400 active:to-orange-500 border border-amber-300 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1 shadow">
+                <span>⚡</span>
+                <span>GAS</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </footer>
+
+    <!-- COIN DEPOSIT MODAL -->
+    <div id="depositModal" style="display: none;" class="absolute inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+      <div class="relative w-full max-w-xs rounded-2xl bg-zinc-900 border border-zinc-700 p-5 shadow-2xl flex flex-col gap-3">
+        <div class="flex items-center justify-between border-b border-zinc-800 pb-2">
+          <div class="flex items-center space-x-2">
+            <span class="w-3.5 h-3.5 rounded-full bg-amber-400 border border-amber-200"></span>
+            <span class="text-sm font-black uppercase text-amber-400">DEPOSIT COINS</span>
+          </div>
+          <button type="button" onclick="closeDepositModal()" class="text-zinc-400 hover:text-white text-lg font-bold">✕</button>
+        </div>
+
+        <div>
+          <label id="depositTargetLabel" class="block text-[11px] font-bold text-zinc-300 uppercase mb-1">
+            TARGET: PLAYER 1 - GAS
+          </label>
+          <div class="relative">
+            <input id="depositAmountInput" type="number" min="5" step="5" value="50" class="w-full py-2.5 px-3 bg-zinc-950 border border-zinc-700 rounded-xl text-amber-400 font-mono text-xl font-bold focus:border-amber-400 focus:outline-none">
+            <span class="absolute right-3 top-2.5 text-xs text-zinc-500 font-bold">COINS</span>
+          </div>
+        </div>
+
+        <!-- Quick Amount Selectors -->
+        <div class="grid grid-cols-4 gap-1.5">
+          <button type="button" onclick="setDepositQuick(20)" class="py-1.5 rounded-lg bg-zinc-800 text-zinc-300 text-xs font-mono font-bold hover:bg-zinc-700">+20</button>
+          <button type="button" onclick="setDepositQuick(50)" class="py-1.5 rounded-lg bg-zinc-800 text-zinc-300 text-xs font-mono font-bold hover:bg-zinc-700">+50</button>
+          <button type="button" onclick="setDepositQuick(100)" class="py-1.5 rounded-lg bg-zinc-800 text-zinc-300 text-xs font-mono font-bold hover:bg-zinc-700">+100</button>
+          <button type="button" onclick="setDepositQuick(200)" class="py-1.5 rounded-lg bg-zinc-800 text-zinc-300 text-xs font-mono font-bold hover:bg-zinc-700">+200</button>
+        </div>
+
+        <div class="flex items-center gap-2 mt-2">
+          <button type="button" onclick="closeDepositModal()" class="w-1/2 py-2.5 rounded-xl bg-zinc-800 text-zinc-300 text-xs font-bold uppercase tracking-wider hover:bg-zinc-700">
+            CANCEL
+          </button>
+          <button type="button" onclick="confirmDeposit()" class="w-1/2 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white text-xs font-black uppercase tracking-wider shadow-lg shadow-emerald-500/30">
+            CONFIRM
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PRE-RACE SETUP MODAL (MANDATORY DURATION 2, 4, 8, 12, CUSTOM & WAGER COINS) -->
+    <div id="preRaceModal" class="absolute inset-0 z-40 bg-black/92 backdrop-blur-md flex items-center justify-center p-4">
+      <div class="relative w-full max-w-sm rounded-3xl bg-zinc-900 border border-zinc-700 p-5 shadow-2xl flex flex-col gap-3.5 text-center max-h-[96vh] overflow-y-auto">
+        
+        <!-- Header Badge -->
+        <div class="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full bg-cyan-950/80 border border-cyan-500/40 text-cyan-400 text-[11px] font-bold uppercase tracking-wider">
+          🏁 DUAL DRAG RACE CHAMPIONSHIP
+        </div>
+
+        <h1 class="text-xl font-black italic tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-amber-300 to-rose-400 uppercase font-hud">
+          SPEEDWAY DUEL
+        </h1>
+
+        <!-- MANDATORY DURATION: 2 MIN, 4 MIN, 8 MIN, 12 MIN, CUSTOM (MIN 2) -->
+        <div class="p-3 bg-zinc-950/90 rounded-2xl border border-amber-500/40 text-left">
+          <label class="block text-[10px] font-black text-amber-400 uppercase mb-1.5 flex items-center justify-between">
+            <span>⏱️ MANDATORY RACE DURATION</span>
+            <span class="text-[9px] text-zinc-400">MIN 2 MINUTES</span>
+          </label>
+          <div class="grid grid-cols-5 gap-1">
+            <button type="button" onclick="selectDuration(2, this)" class="duration-btn active py-2 rounded-lg border border-amber-400 bg-amber-500/20 text-amber-300 font-bold text-[11px] uppercase transition-all">
+              2 MIN
+            </button>
+            <button type="button" onclick="selectDuration(4, this)" class="duration-btn py-2 rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-400 font-bold text-[11px] uppercase hover:border-zinc-600 transition-all">
+              4 MIN
+            </button>
+            <button type="button" onclick="selectDuration(8, this)" class="duration-btn py-2 rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-400 font-bold text-[11px] uppercase hover:border-zinc-600 transition-all">
+              8 MIN
+            </button>
+            <button type="button" onclick="selectDuration(12, this)" class="duration-btn py-2 rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-400 font-bold text-[11px] uppercase hover:border-zinc-600 transition-all">
+              12 MIN
+            </button>
+            <button type="button" onclick="selectDuration('custom', this)" class="duration-btn py-2 rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-400 font-bold text-[10px] uppercase hover:border-zinc-600 transition-all">
+              CUSTOM
+            </button>
+          </div>
+
+          <!-- Custom Duration Input Row (Hidden unless custom is chosen) -->
+          <div id="customDurationRow" style="display: none;" class="mt-2 pt-2 border-t border-zinc-800/80 flex items-center justify-between gap-2">
+            <span class="text-[10px] text-zinc-300 font-bold uppercase">CUSTOM (MIN 2):</span>
+            <div class="flex items-center gap-1.5">
+              <input id="customMinutesInput" type="number" min="2" step="1" value="2" oninput="validateCustomDuration(this)" class="w-16 py-1 px-2 text-center bg-zinc-900 border border-amber-400/60 rounded-lg text-amber-300 font-bold text-xs focus:outline-none">
+              <span class="text-[10px] text-zinc-400 font-bold">MIN</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- COMPETITORS WAGER COIN SYSTEM (LINE 1 AUTO-FILLS LINE 2) -->
+        <div class="p-3 bg-zinc-950/90 rounded-2xl border border-yellow-500/40 text-left">
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-[10px] font-black text-yellow-400 uppercase flex items-center gap-1">
+              <span>🪙 COMPETITOR WAGER COINS</span>
+            </label>
+            <span class="text-[9px] text-zinc-400">WINNER TAKES ALL POT</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <!-- Line 1 Wager (Master Input) -->
+            <div>
+              <span class="block text-[9px] font-bold text-cyan-400 uppercase mb-0.5">LINE 1 COIN:</span>
+              <input id="wagerLane1" type="number" min="0" step="10" value="100" oninput="onLine1WagerChange(this.value)" class="w-full py-1.5 px-2 bg-zinc-900 border border-cyan-500/50 rounded-lg text-cyan-300 font-mono text-xs font-bold focus:border-cyan-400 focus:outline-none text-center">
+            </div>
+
+            <!-- Line 2 Wager (Auto Synced from Line 1) -->
+            <div>
+              <span class="block text-[9px] font-bold text-amber-400 uppercase mb-0.5">LINE 2 COIN (SYNC):</span>
+              <input id="wagerLane2" type="number" readonly value="100" class="w-full py-1.5 px-2 bg-zinc-900/60 border border-amber-500/30 rounded-lg text-amber-300/80 font-mono text-xs font-bold focus:outline-none text-center cursor-not-allowed">
+            </div>
+          </div>
+
+          <!-- Total Stake Pot Banner -->
+          <div class="mt-2 pt-2 border-t border-zinc-800 flex items-center justify-between px-1">
+            <span class="text-[10px] text-zinc-400 uppercase font-bold">TOTAL WAGER POT:</span>
+            <div class="flex items-center space-x-1">
+              <span id="modalPotDisplay" class="font-hud font-black text-amber-400 text-sm">200</span>
+              <span class="text-xs">🪙</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Name Inputs -->
+        <div class="space-y-2 text-left">
+          <div>
+            <label class="block text-[10px] font-bold text-cyan-400 uppercase mb-0.5">
+              COMPETITOR 1 (LANE 1)
+            </label>
+            <input id="inputP1Name" type="text" maxlength="14" value="APEX RACER" class="w-full py-1.5 px-2.5 bg-zinc-950 border border-cyan-800 rounded-xl text-white font-bold text-xs focus:border-cyan-400 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-amber-400 uppercase mb-0.5">
+              COMPETITOR 2 (LANE 2)
+            </label>
+            <input id="inputP2Name" type="text" maxlength="14" value="VIPER STORM" class="w-full py-1.5 px-2.5 bg-zinc-950 border border-amber-800 rounded-xl text-white font-bold text-xs focus:border-amber-400 focus:outline-none">
+          </div>
+        </div>
+
+        <!-- Start Button -->
+        <button id="startRaceBtn" type="button" onclick="startRace()" class="w-full py-3 px-6 rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-600 to-amber-500 hover:from-cyan-400 hover:to-amber-400 text-white font-black text-sm uppercase tracking-wider shadow-lg shadow-cyan-500/30 flex items-center justify-center gap-2 cursor-pointer border border-white/20 mt-1">
+          <span>CONFIRM & START RACE</span>
+          <span class="text-base">⚡</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- RACE FINISH & WINNER DECLARATION MODAL WITH CONGRATULATIONS & TOTAL WON COINS -->
+    <div id="finishModal" style="display: none;" class="absolute inset-0 z-50 bg-black/92 backdrop-blur-lg flex items-center justify-center p-4">
+      <div class="relative w-full max-w-sm rounded-3xl bg-zinc-900 border border-amber-500/60 p-6 shadow-2xl flex flex-col items-center text-center gap-3.5">
+        
+        <div class="w-16 h-16 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center text-3xl shadow-[0_0_26px_rgba(245,158,11,0.6)] animate-bounce">
+          🏆
+        </div>
+
+        <div>
+          <!-- CONGRATULATIONS MESSAGE -->
+          <span class="text-xs font-black uppercase tracking-widest text-amber-400 block mb-0.5">
+            🎉 CONGRATULATIONS! 🎉
+          </span>
+          <h2 id="winnerText" class="text-2xl font-black font-hud uppercase text-white tracking-wide">
+            PLAYER 1 WINS!
+          </h2>
+        </div>
+
+        <!-- TOTAL WINNINGS POT BANNER -->
+        <div class="w-full py-2.5 px-4 bg-gradient-to-r from-amber-950/80 via-yellow-900/60 to-amber-950/80 rounded-2xl border border-amber-400/50 shadow-inner flex flex-col items-center justify-center">
+          <span class="text-[10px] font-bold text-amber-300 uppercase tracking-widest">TOTAL WAGER REWARD COLLECTED</span>
+          <div class="flex items-center space-x-1.5 mt-0.5">
+            <span id="finalRewardPotText" class="text-2xl font-hud font-black text-yellow-300">+200</span>
+            <span class="text-lg">🪙 COINS</span>
+          </div>
+        </div>
+
+        <!-- Final Stats Comparison -->
+        <div class="w-full bg-zinc-950 p-3 rounded-2xl border border-zinc-800 space-y-2">
+          <div class="flex items-center justify-between border-b border-zinc-800 pb-1.5">
+            <div class="text-left">
+              <span id="finalP1Name" class="text-xs font-bold text-cyan-400 block">PLAYER 1</span>
+              <span class="text-[10px] text-zinc-500">LANE 1</span>
+            </div>
+            <div class="text-right">
+              <span id="finalP1Dist" class="text-xs font-hud font-bold text-white">0.000 KM</span>
+              <span id="finalP1MaxSpeed" class="text-[10px] text-zinc-400 block">TOP: 0 KM/H</span>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-0.5">
+            <div class="text-left">
+              <span id="finalP2Name" class="text-xs font-bold text-amber-400 block">PLAYER 2</span>
+              <span class="text-[10px] text-zinc-500">LANE 2</span>
+            </div>
+            <div class="text-right">
+              <span id="finalP2Dist" class="text-xs font-hud font-bold text-white">0.000 KM</span>
+              <span id="finalP2MaxSpeed" class="text-[10px] text-zinc-400 block">TOP: 0 KM/H</span>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" onclick="restartRaceSetup()" class="w-full py-3 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2 border border-white/20">
+          <span>🔄 NEW RACE</span>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // Canvas roundRect Polyfill
+    if (!CanvasRenderingContext2D.prototype.roundRect) {
+      CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, radii) {
+        if (!radii) radii = 0;
+        let r = typeof radii === 'number' ? radii : (Array.isArray(radii) ? radii[0] : 0);
+        r = Math.min(r, w / 2, h / 2);
+        this.beginPath();
+        this.moveTo(x + r, y);
+        this.arcTo(x + w, y, x + w, y + h, r);
+        this.arcTo(x + w, y + h, x, y + h, r);
+        this.arcTo(x, y + h, x, y, r);
+        this.arcTo(x, y, x + w, y, r);
+        this.closePath();
+        return this;
+      };
+    }
+
+    // Audio Engine for V8 Dual Engine Simulation
+    class DualSoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.masterGain = null;
+        this.compressor = null;
+        this.p1Osc = null;
+        this.p1Gain = null;
+        this.p2Osc = null;
+        this.p2Gain = null;
+        this.initialized = false;
+      }
+
+      init() {
+        if (this.initialized && this.ctx) {
+          if (this.ctx.state === 'suspended') this.ctx.resume();
+          return;
+        }
+        try {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContext) return;
+          this.ctx = new AudioContext();
+
+          this.compressor = this.ctx.createDynamicsCompressor();
+          this.masterGain = this.ctx.createGain();
+          this.masterGain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+          this.compressor.connect(this.masterGain);
+          this.masterGain.connect(this.ctx.destination);
+
+          // P1 Engine Tone (Sawtooth)
+          this.p1Osc = this.ctx.createOscillator();
+          this.p1Osc.type = 'sawtooth';
+          this.p1Gain = this.ctx.createGain();
+          this.p1Gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+          this.p1Osc.connect(this.p1Gain);
+          this.p1Gain.connect(this.compressor);
+          this.p1Osc.start();
+
+          // P2 Engine Tone (Triangle)
+          this.p2Osc = this.ctx.createOscillator();
+          this.p2Osc.type = 'triangle';
+          this.p2Gain = this.ctx.createGain();
+          this.p2Gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+          this.p2Osc.connect(this.p2Gain);
+          this.p2Gain.connect(this.compressor);
+          this.p2Osc.start();
+
+          this.initialized = true;
+        } catch (e) {
+          console.warn("Audio Context init:", e);
+        }
+      }
+
+      updateSounds(p1Speed, p2Speed, isRunning) {
+        if (!this.ctx || !this.initialized) return;
+        const now = this.ctx.currentTime;
+        if (!isRunning) {
+          this.p1Gain.gain.setTargetAtTime(0.001, now, 0.1);
+          this.p2Gain.gain.setTargetAtTime(0.001, now, 0.1);
+          return;
+        }
+        this.p1Gain.gain.setTargetAtTime(0.2, now, 0.05);
+        this.p2Gain.gain.setTargetAtTime(0.25, now, 0.05);
+        const p1Freq = 48 + (p1Speed / 220) * 160;
+        const p2Freq = 44 + (p2Speed / 220) * 155;
+        this.p1Osc.frequency.setTargetAtTime(p1Freq, now, 0.05);
+        this.p2Osc.frequency.setTargetAtTime(p2Freq, now, 0.05);
+      }
+
+      playSfx(type) {
+        if (!this.ctx || !this.initialized) return;
+        try {
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.connect(gain);
+          gain.connect(this.compressor);
+
+          if (type === 'gas') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(140, now);
+            osc.frequency.exponentialRampToValueAtTime(360, now + 0.12);
+            gain.gain.setValueAtTime(0.28, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+            osc.start(now);
+            osc.stop(now + 0.15);
+          } else if (type === 'brake') {
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(680, now);
+            osc.frequency.exponentialRampToValueAtTime(290, now + 0.12);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+            osc.start(now);
+            osc.stop(now + 0.16);
+          } else if (type === 'coin') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(950, now);
+            osc.frequency.exponentialRampToValueAtTime(1400, now + 0.12);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+            osc.start(now);
+            osc.stop(now + 0.15);
+          } else if (type === 'finish') {
+            const freqs = [523.25, 659.25, 783.99, 1046.50];
+            freqs.forEach(f => {
+              const o = this.ctx.createOscillator();
+              const g = this.ctx.createGain();
+              o.connect(g);
+              g.connect(this.compressor);
+              o.type = 'triangle';
+              o.frequency.setValueAtTime(f, now);
+              g.gain.setValueAtTime(0.25, now);
+              g.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+              o.start(now);
+              o.stop(now + 1.25);
+            });
+          }
+        } catch (e) {}
+      }
+    }
+
+    const sound = new DualSoundEngine();
+
+    // Canvas & Context Setup
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // UI Elements
+    const p1NameDisplay = document.getElementById('p1NameDisplay');
+    const p2NameDisplay = document.getElementById('p2NameDisplay');
+    const p1SpeedEl = document.getElementById('p1Speed');
+    const p2SpeedEl = document.getElementById('p2Speed');
+    const p1DistanceEl = document.getElementById('p1Distance');
+    const p2DistanceEl = document.getElementById('p2Distance');
+    const leadBanner = document.getElementById('leadBanner');
+    const raceTimerDisplay = document.getElementById('raceTimerDisplay');
+    const hudPotDisplay = document.getElementById('hudPotDisplay');
+
+    const p1GasCoinsEl = document.getElementById('p1GasCoins');
+    const p1BrakeCoinsEl = document.getElementById('p1BrakeCoins');
+    const p2GasCoinsEl = document.getElementById('p2GasCoins');
+    const p2BrakeCoinsEl = document.getElementById('p2BrakeCoins');
+
+    const preRaceModal = document.getElementById('preRaceModal');
+    const finishModal = document.getElementById('finishModal');
+    const depositModal = document.getElementById('depositModal');
+    const depositTargetLabel = document.getElementById('depositTargetLabel');
+    const depositAmountInput = document.getElementById('depositAmountInput');
+
+    const customDurationRow = document.getElementById('customDurationRow');
+    const customMinutesInput = document.getElementById('customMinutesInput');
+    const wagerLane1 = document.getElementById('wagerLane1');
+    const wagerLane2 = document.getElementById('wagerLane2');
+    const modalPotDisplay = document.getElementById('modalPotDisplay');
+    const finalRewardPotText = document.getElementById('finalRewardPotText');
+
+    let width = 360;
+    let height = 500;
+
+    function resizeCanvas() {
+      const parent = canvas.parentElement;
+      if (parent) {
+        width = canvas.width = Math.floor(parent.clientWidth || 360);
+        height = canvas.height = Math.floor(parent.clientHeight || 500);
+        if (player1.currentY === 0) player1.currentY = height * 0.65;
+        if (player2.currentY === 0) player2.currentY = height * 0.65;
+      }
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    // Race Configuration & Wager State
+    let selectedDurationMinutes = 2; // Default 2 min
+    let raceDurationSeconds = 120;
+    let timeRemaining = 120;
+    let isGameRunning = false;
+    let totalWagerPot = 200; // 100 + 100 default
+
+    // Dual Competitors State with Ultra-Smooth Fluid Aerodynamics
+    const player1 = {
+      name: "APEX RACER",
+      color: "#06b6d4",
+      roofColor: "#0284c7",
+      speed: 0,
+      targetSpeed: 0,
+      maxRecordedSpeed: 0,
+      idleSpeed: 8,
+      maxSpeed: 230,
+      distance: 0,
+      gasCoins: 100,
+      brakeCoins: 50,
+      smokeCharge: 0,
+      currentY: 0
+    };
+
+    const player2 = {
+      name: "VIPER STORM",
+      color: "#f59e0b",
+      roofColor: "#d97706",
+      speed: 0,
+      targetSpeed: 0,
+      maxRecordedSpeed: 0,
+      idleSpeed: 8,
+      maxSpeed: 230,
+      distance: 0,
+      gasCoins: 100,
+      brakeCoins: 50,
+      smokeCharge: 0,
+      currentY: 0
+    };
+
+    let roadOffset = 0;
+    let activeDepositTarget = null;
+    let smokeParticles = [];
+    let skidMarks = [];
+
+    // Road Bounds (Exact 2 Lanes for Dual Drag Race)
+    function getRoadMetrics() {
+      const roadWidth = Math.min(Math.max(width * 0.68, 210), 320);
+      const roadLeft = (width - roadWidth) / 2;
+      const laneWidth = roadWidth / 2;
+      return {
+        left: roadLeft,
+        width: roadWidth,
+        laneWidth: laneWidth,
+        p1X: roadLeft + laneWidth * 0.5,
+        p2X: roadLeft + laneWidth * 1.5
+      };
+    }
+
+    // High-Density Metropolitan City Buildings
+    let buildings = [];
+    function initCityBuildings() {
+      buildings = [];
+      const palettes = [
+        { facade: '#111827', window: '#38bdf8', roof: '#1f2937' },
+        { facade: '#18181b', window: '#fef08a', roof: '#27272a' },
+        { facade: '#0f172a', window: '#c084fc', roof: '#1e293b' },
+        { facade: '#1c1917', window: '#fdba74', roof: '#292524' }
+      ];
+
+      ['left', 'right'].forEach(side => {
+        let y = height + 100;
+        while (y > -height * 1.5) {
+          const bH = 120 + Math.random() * 90;
+          const theme = palettes[Math.floor(Math.random() * palettes.length)];
+          buildings.push({
+            side: side,
+            y: y,
+            h: bH,
+            theme: theme,
+            hasAntenna: Math.random() < 0.45,
+            hasHelipad: Math.random() < 0.25,
+            neonSign: Math.random() < 0.35 ? ['TURBO', 'V8', 'METRO', 'APEX', 'NEO'][Math.floor(Math.random() * 5)] : null
+          });
+          y -= (bH + 18);
+        }
+      });
+    }
+    resizeCanvas();
+    initCityBuildings();
+
+    // ==========================================
+    // MANDATORY DURATION SELECTION (2, 4, 8, 12, CUSTOM min 2)
+    // ==========================================
+    window.selectDuration = function(mins, btnElement) {
+      document.querySelectorAll('.duration-btn').forEach(btn => {
+        btn.classList.remove('active', 'border-amber-400', 'bg-amber-500/20', 'text-amber-300');
+        btn.classList.add('border-zinc-800', 'bg-zinc-900', 'text-zinc-400');
+      });
+
+      btnElement.classList.add('active', 'border-amber-400', 'bg-amber-500/20', 'text-amber-300');
+      btnElement.classList.remove('border-zinc-800', 'bg-zinc-900', 'text-zinc-400');
+
+      if (mins === 'custom') {
+        customDurationRow.style.display = 'flex';
+        let customVal = parseInt(customMinutesInput.value, 10);
+        if (isNaN(customVal) || customVal < 2) {
+          customVal = 2;
+          customMinutesInput.value = 2;
+        }
+        selectedDurationMinutes = customVal;
+      } else {
+        customDurationRow.style.display = 'none';
+        selectedDurationMinutes = mins;
+      }
+
+      raceDurationSeconds = selectedDurationMinutes * 60;
+      timeRemaining = raceDurationSeconds;
+    };
+
+    window.validateCustomDuration = function(inputEl) {
+      let val = parseInt(inputEl.value, 10);
+      if (isNaN(val) || val < 2) {
+        val = 2;
+      }
+      selectedDurationMinutes = val;
+      raceDurationSeconds = selectedDurationMinutes * 60;
+      timeRemaining = raceDurationSeconds;
+    };
+
+    // ==========================================
+    // WAGER AUTO-SYNC SYSTEM (LINE 1 AUTO-FILLS LINE 2)
+    // ==========================================
+    window.onLine1WagerChange = function(val) {
+      let amt = parseInt(val, 10);
+      if (isNaN(amt) || amt < 0) amt = 0;
+      wagerLane2.value = amt;
+      totalWagerPot = amt * 2;
+      modalPotDisplay.innerText = totalWagerPot;
+    };
+
+    // ==========================================
+    // REALISTIC SMOKE GENERATOR (CONNECTED TO DUAL EXHAUST PIPES)
+    // ==========================================
+    function emitRealisticExhaust(carX, carY, carW, carH, intensityMultiplier, colorType) {
+      const halfW = carW / 2;
+      const halfH = carH / 2;
+      const leftPipeX = carX - halfW + 7;
+      const rightPipeX = carX + halfW - 7;
+      const exhaustY = carY + halfH + 2;
+
+      const count = Math.min(7, Math.max(2, Math.floor(intensityMultiplier * 2.2)));
+
+      [leftPipeX, rightPipeX].forEach(pipeX => {
+        for (let i = 0; i < count; i++) {
+          const spreadX = (Math.random() - 0.5) * 6;
+          const isNitrous = Math.random() < 0.25;
+
+          smokeParticles.push({
+            x: pipeX + spreadX,
+            y: exhaustY + (Math.random() * 4),
+            vx: (Math.random() - 0.5) * 1.5,
+            vy: 2.2 + Math.random() * 4.0 + (intensityMultiplier * 1.2),
+            radius: 4 + Math.random() * 4,
+            growth: 12 + Math.random() * 15,
+            alpha: 0.85,
+            decay: 1.2 + Math.random() * 0.8,
+            rotation: Math.random() * Math.PI * 2,
+            rotSpeed: (Math.random() - 0.5) * 3,
+            isFire: isNitrous && intensityMultiplier > 1.5,
+            colorHue: colorType === 'cyan' ? 185 : 38
+          });
+        }
+      });
+    }
+
+    // ==========================================
+    // CONTROLS (SMOOTH FLUID ACCELERATION - ZERO JITTER/JERK)
+    // ==========================================
+    function pressP1Gas() {
+      if (!isGameRunning) return;
+      if (player1.gasCoins >= 10) {
+        player1.gasCoins -= 10;
+        // Smooth progressive throttle increase without bouncing jerk
+        player1.targetSpeed = Math.min(player1.targetSpeed + 26, player1.maxSpeed);
+        player1.smokeCharge = Math.min(player1.smokeCharge + 1.8, 4.5);
+        sound.playSfx('gas');
+        updateCoinDisplays();
+      }
+    }
+
+    function pressP1Brake() {
+      if (!isGameRunning) return;
+      if (player1.brakeCoins >= 5) {
+        player1.brakeCoins -= 5;
+        // Smooth progressive brake deceleration
+        player1.targetSpeed = Math.max(player1.idleSpeed, player1.targetSpeed - 35);
+        sound.playSfx('brake');
+        addSkids(1, player1.currentY);
+        updateCoinDisplays();
+      }
+    }
+
+    function pressP2Gas() {
+      if (!isGameRunning) return;
+      if (player2.gasCoins >= 10) {
+        player2.gasCoins -= 10;
+        // Smooth progressive throttle increase without bouncing jerk
+        player2.targetSpeed = Math.min(player2.targetSpeed + 26, player2.maxSpeed);
+        player2.smokeCharge = Math.min(player2.smokeCharge + 1.8, 4.5);
+        sound.playSfx('gas');
+        updateCoinDisplays();
+      }
+    }
+
+    function pressP2Brake() {
+      if (!isGameRunning) return;
+      if (player2.brakeCoins >= 5) {
+        player2.brakeCoins -= 5;
+        // Smooth progressive brake deceleration
+        player2.targetSpeed = Math.max(player2.idleSpeed, player2.targetSpeed - 35);
+        sound.playSfx('brake');
+        addSkids(2, player2.currentY);
+        updateCoinDisplays();
+      }
+    }
+
+    function addSkids(laneNum, carY) {
+      const road = getRoadMetrics();
+      const x = laneNum === 1 ? road.p1X : road.p2X;
+      const targetY = carY || (height - 120);
+      skidMarks.push({ x: x - 12, y: targetY + 22, life: 1 });
+      skidMarks.push({ x: x + 12, y: targetY + 22, life: 1 });
+    }
+
+    function bindControlBtn(id, actionFn) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        actionFn();
+      });
+    }
+
+    bindControlBtn('p1BtnGas', pressP1Gas);
+    bindControlBtn('p1BtnBrake', pressP1Brake);
+    bindControlBtn('p2BtnGas', pressP2Gas);
+    bindControlBtn('p2BtnBrake', pressP2Brake);
+
+    // Keyboard Hotkeys
+    window.addEventListener('keydown', (e) => {
+      if (!isGameRunning) return;
+      if (e.code === 'KeyW') pressP1Gas();
+      if (e.code === 'KeyS') pressP1Brake();
+      if (e.code === 'ArrowUp') pressP2Gas();
+      if (e.code === 'ArrowDown') pressP2Brake();
+    });
+
+    // ==========================================
+    // COIN DEPOSIT MODAL LOGIC
+    // ==========================================
+    window.openDepositModal = function(targetKey, labelText) {
+      activeDepositTarget = targetKey;
+      depositTargetLabel.innerText = "TARGET: " + labelText;
+      depositAmountInput.value = "50";
+      depositModal.style.display = 'flex';
+    };
+
+    window.closeDepositModal = function() {
+      depositModal.style.display = 'none';
+      activeDepositTarget = null;
+    };
+
+    window.setDepositQuick = function(amt) {
+      depositAmountInput.value = amt;
+    };
+
+    window.confirmDeposit = function() {
+      const amt = parseInt(depositAmountInput.value, 10);
+      if (isNaN(amt) || amt <= 0) {
+        closeDepositModal();
+        return;
+      }
+
+      if (activeDepositTarget === 'p1_gas') player1.gasCoins += amt;
+      else if (activeDepositTarget === 'p1_brake') player1.brakeCoins += amt;
+      else if (activeDepositTarget === 'p2_gas') player2.gasCoins += amt;
+      else if (activeDepositTarget === 'p2_brake') player2.brakeCoins += amt;
+
+      sound.playSfx('coin');
+      updateCoinDisplays();
+      closeDepositModal();
+    };
+
+    function updateCoinDisplays() {
+      p1GasCoinsEl.innerText = player1.gasCoins;
+      p1BrakeCoinsEl.innerText = player1.brakeCoins;
+      p2GasCoinsEl.innerText = player2.gasCoins;
+      p2BrakeCoinsEl.innerText = player2.brakeCoins;
+
+      p1GasCoinsEl.className = `text-xs font-mono font-bold ${player1.gasCoins < 10 ? 'text-rose-400' : 'text-amber-300'}`;
+      p1BrakeCoinsEl.className = `text-xs font-mono font-bold ${player1.brakeCoins < 5 ? 'text-rose-400' : 'text-amber-300'}`;
+      p2GasCoinsEl.className = `text-xs font-mono font-bold ${player2.gasCoins < 10 ? 'text-rose-400' : 'text-amber-300'}`;
+      p2BrakeCoinsEl.className = `text-xs font-mono font-bold ${player2.brakeCoins < 5 ? 'text-rose-400' : 'text-amber-300'}`;
+    }
+
+    // ==========================================
+    // PRE-RACE & FINISH LOGIC
+    // ==========================================
+    window.startRace = function() {
+      resizeCanvas();
+      const p1Input = document.getElementById('inputP1Name').value.trim();
+      const p2Input = document.getElementById('inputP2Name').value.trim();
+
+      player1.name = p1Input || "PLAYER 1";
+      player2.name = p2Input || "PLAYER 2";
+
+      p1NameDisplay.innerText = player1.name.toUpperCase();
+      p2NameDisplay.innerText = player2.name.toUpperCase();
+
+      let w1 = parseInt(wagerLane1.value, 10);
+      if (isNaN(w1) || w1 < 0) w1 = 0;
+      totalWagerPot = w1 * 2;
+      hudPotDisplay.innerText = totalWagerPot;
+
+      player1.speed = player1.idleSpeed;
+      player2.speed = player2.idleSpeed;
+      player1.targetSpeed = player1.idleSpeed;
+      player2.targetSpeed = player2.idleSpeed;
+      player1.maxRecordedSpeed = player1.idleSpeed;
+      player2.maxRecordedSpeed = player2.idleSpeed;
+      player1.distance = 0;
+      player2.distance = 0;
+      player1.smokeCharge = 0;
+      player2.smokeCharge = 0;
+      player1.currentY = height * 0.65;
+      player2.currentY = height * 0.65;
+
+      timeRemaining = raceDurationSeconds;
+
+      updateCoinDisplays();
+      initCityBuildings();
+
+      preRaceModal.style.display = 'none';
+      finishModal.style.display = 'none';
+      isGameRunning = true;
+      sound.init();
+    };
+
+    function endRace() {
+      isGameRunning = false;
+      sound.playSfx('finish');
+      sound.updateSounds(0, 0, false);
+
+      const p1Dist = player1.distance;
+      const p2Dist = player2.distance;
+      const winnerText = document.getElementById('winnerText');
+
+      if (p1Dist > p2Dist) {
+        winnerText.innerText = `${player1.name} WINS!`;
+        winnerText.className = "text-2xl font-black font-hud uppercase text-cyan-400 tracking-wide";
+        finalRewardPotText.innerText = `+${totalWagerPot}`;
+      } else if (p2Dist > p1Dist) {
+        winnerText.innerText = `${player2.name} WINS!`;
+        winnerText.className = "text-2xl font-black font-hud uppercase text-amber-400 tracking-wide";
+        finalRewardPotText.innerText = `+${totalWagerPot}`;
+      } else {
+        winnerText.innerText = "IT'S A DEAD TIE!";
+        winnerText.className = "text-2xl font-black font-hud uppercase text-yellow-300 tracking-wide";
+        finalRewardPotText.innerText = `SPLIT ${totalWagerPot / 2} EACH`;
+      }
+
+      document.getElementById('finalP1Name').innerText = player1.name;
+      document.getElementById('finalP1Dist').innerText = p1Dist.toFixed(3) + ' KM';
+      document.getElementById('finalP1MaxSpeed').innerText = 'TOP: ' + Math.round(player1.maxRecordedSpeed) + ' KM/H';
+
+      document.getElementById('finalP2Name').innerText = player2.name;
+      document.getElementById('finalP2Dist').innerText = p2Dist.toFixed(3) + ' KM';
+      document.getElementById('finalP2MaxSpeed').innerText = 'TOP: ' + Math.round(player2.maxRecordedSpeed) + ' KM/H';
+
+      finishModal.style.display = 'flex';
+    }
+
+    window.restartRaceSetup = function() {
+      finishModal.style.display = 'none';
+      preRaceModal.style.display = 'flex';
+    };
+
+    // ==========================================
+    // GAME SIMULATION LOOP
+    // ==========================================
+    let lastTime = performance.now();
+
+    function gameLoop(currentTime) {
+      const dt = Math.min((currentTime - lastTime) / 1000, 0.1);
+      lastTime = currentTime;
+
+      if (isGameRunning) {
+        updateSimulation(dt);
+      }
+
+      render(currentTime, dt);
+      requestAnimationFrame(gameLoop);
+    }
+
+    function updateSimulation(dt) {
+      // Countdown Timer
+      timeRemaining = Math.max(0, timeRemaining - dt);
+      const minutes = Math.floor(timeRemaining / 60);
+      const seconds = Math.floor(timeRemaining % 60);
+      const formattedTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      raceTimerDisplay.innerText = formattedTime;
+
+      if (timeRemaining <= 10) {
+        raceTimerDisplay.className = "text-xs font-hud font-black text-rose-500 animate-pulse tracking-widest";
+      } else {
+        raceTimerDisplay.className = "text-xs font-hud font-black text-amber-400 tracking-widest";
+      }
+
+      if (timeRemaining <= 0) {
+        endRace();
+        return;
+      }
+
+      // Natural gradual decel towards idle speed
+      if (player1.targetSpeed > player1.idleSpeed) {
+        player1.targetSpeed = Math.max(player1.idleSpeed, player1.targetSpeed - 12 * dt);
+      }
+      if (player2.targetSpeed > player2.idleSpeed) {
+        player2.targetSpeed = Math.max(player2.idleSpeed, player2.targetSpeed - 12 * dt);
+      }
+
+      // Smooth critically damped acceleration transfer: eliminates harsh jerky spikes
+      player1.speed += (player1.targetSpeed - player1.speed) * Math.min(1, dt * 5.0);
+      player2.speed += (player2.targetSpeed - player2.speed) * Math.min(1, dt * 5.0);
+
+      player1.maxRecordedSpeed = Math.max(player1.maxRecordedSpeed, player1.speed);
+      player2.maxRecordedSpeed = Math.max(player2.maxRecordedSpeed, player2.speed);
+
+      // Distance increments: (KM/H) * (hours)
+      player1.distance += (player1.speed * dt) / 3600;
+      player2.distance += (player2.speed * dt) / 3600;
+
+      // Road scroll step based on leader speed
+      const maxCurrentSpeed = Math.max(player1.speed, player2.speed, player1.idleSpeed);
+      const scrollStep = maxCurrentSpeed * 0.18;
+      roadOffset += scrollStep;
+
+      // Update City Buildings Scroll
+      buildings.forEach(b => {
+        b.y += scrollStep;
+        if (b.y > height + 160) {
+          b.y = -160 - Math.random() * 80;
+        }
+      });
+
+      // Update Skid Marks
+      for (let i = skidMarks.length - 1; i >= 0; i--) {
+        skidMarks[i].y += scrollStep;
+        skidMarks[i].life -= 0.015;
+        if (skidMarks[i].life <= 0 || skidMarks[i].y > height + 20) {
+          skidMarks.splice(i, 1);
+        }
+      }
+
+      // =========================================================================
+      // ULTRA-SMOOTH CONTINUOUS TRACK DEPTH SYSTEM
+      // Smoothly glides forward or falls behind without back-and-forth bounce jerks!
+      // =========================================================================
+      const distDiffMeters = (player1.distance - player2.distance) * 1000;
+      const speedDiff = (player1.speed - player2.speed) / player1.maxSpeed;
+
+      // Center baseline
+      const baseCruisingY = height * 0.58;
+      const maxSpan = height * 0.30; // Leader can push far ahead toward top horizon
+
+      // Blended progressive offset based on accumulated distance and relative speed
+      const smoothShift = (Math.tanh(distDiffMeters / 30) * (maxSpan * 0.75)) + (speedDiff * (maxSpan * 0.25));
+
+      // Calculate Target Y coordinates smoothly
+      let targetY1 = baseCruisingY - smoothShift;
+      let targetY2 = baseCruisingY + smoothShift;
+
+      // Safety bounds to stay well within canvas
+      const topHorizonBound = height * 0.18;
+      const bottomTrackBound = height - 85;
+      targetY1 = Math.max(topHorizonBound, Math.min(bottomTrackBound, targetY1));
+      targetY2 = Math.max(topHorizonBound, Math.min(bottomTrackBound, targetY2));
+
+      // Continuous exponential lerp: silk-smooth gliding with zero jerking or bouncing
+      const smoothGlideLerp = 1 - Math.exp(-dt * 3.2);
+      player1.currentY += (targetY1 - player1.currentY) * smoothGlideLerp;
+      player2.currentY += (targetY2 - player2.currentY) * smoothGlideLerp;
+
+      const road = getRoadMetrics();
+      const carW = 42;
+      const carH = 78;
+
+      // Emit connected realistic smoke for P1 at its exact visual Y
+      if (player1.smokeCharge > 0.1) {
+        emitRealisticExhaust(road.p1X, player1.currentY, carW, carH, player1.smokeCharge, 'cyan');
+        player1.smokeCharge = Math.max(0, player1.smokeCharge - dt * 2.2);
+      } else if (player1.speed > 10) {
+        if (Math.random() < 0.28) {
+          emitRealisticExhaust(road.p1X, player1.currentY, carW, carH, 0.4, 'cyan');
+        }
+      }
+
+      // Emit connected realistic smoke for P2 at its exact visual Y
+      if (player2.smokeCharge > 0.1) {
+        emitRealisticExhaust(road.p2X, player2.currentY, carW, carH, player2.smokeCharge, 'amber');
+        player2.smokeCharge = Math.max(0, player2.smokeCharge - dt * 2.2);
+      } else if (player2.speed > 10) {
+        if (Math.random() < 0.28) {
+          emitRealisticExhaust(road.p2X, player2.currentY, carW, carH, 0.4, 'amber');
+        }
+      }
+
+      // Update Realistic Smoke Particles Physics
+      for (let i = smokeParticles.length - 1; i >= 0; i--) {
+        const p = smokeParticles[i];
+        p.x += p.vx;
+        p.y += p.vy + scrollStep * 0.45;
+        p.radius += p.growth * dt;
+        p.rotation += p.rotSpeed * dt;
+        p.alpha -= p.decay * dt;
+
+        if (p.alpha <= 0 || p.y > height + 60) {
+          smokeParticles.splice(i, 1);
+        }
+      }
+
+      // Audio engine update
+      sound.updateSounds(player1.speed, player2.speed, true);
+
+      // HUD UI Refresh
+      p1SpeedEl.innerText = Math.round(player1.speed);
+      p2SpeedEl.innerText = Math.round(player2.speed);
+      p1DistanceEl.innerText = player1.distance.toFixed(3);
+      p2DistanceEl.innerText = player2.distance.toFixed(3);
+
+      // LIVE LEADER CALCULATION (SHOWN IN EXACT CENTER)
+      const diff = player1.distance - player2.distance;
+      if (Math.abs(diff) < 0.002) {
+        leadBanner.innerText = "DEAD HEAT (TIED)";
+        leadBanner.className = "text-[10px] font-bold uppercase tracking-wider px-3.5 py-1 rounded-full bg-zinc-800 text-zinc-300 border border-zinc-700 shadow-md whitespace-nowrap";
+      } else if (diff > 0) {
+        const leadMeters = Math.round(diff * 1000);
+        leadBanner.innerText = `LEADER: ${player1.name} (+${leadMeters}M)`;
+        leadBanner.className = "text-[10px] font-bold uppercase tracking-wider px-3.5 py-1 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-500 shadow-[0_0_12px_rgba(6,182,212,0.35)] whitespace-nowrap";
+      } else {
+        const leadMeters = Math.round(Math.abs(diff) * 1000);
+        leadBanner.innerText = `LEADER: ${player2.name} (+${leadMeters}M)`;
+        leadBanner.className = "text-[10px] font-bold uppercase tracking-wider px-3.5 py-1 rounded-full bg-amber-950 text-amber-300 border border-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.35)] whitespace-nowrap";
+      }
+    }
+
+    // ==========================================
+    // GRAPHICS RENDERING
+    // ==========================================
+    function render(currentTime, dt) {
+      ctx.clearRect(0, 0, width, height);
+      const road = getRoadMetrics();
+
+      // 1. City Horizon Dark Backdrop
+      ctx.fillStyle = '#05070a';
+      ctx.fillRect(0, 0, width, height);
+
+      // 2. Metropolitan City Buildings on Left & Right Sides
+      buildings.forEach(b => {
+        const isLeft = b.side === 'left';
+        const bW = isLeft ? road.left - 16 : width - (road.left + road.width + 16);
+        const bX = isLeft ? 0 : road.left + road.width + 16;
+        if (bW > 8) {
+          ctx.fillStyle = b.theme.facade;
+          ctx.fillRect(bX, b.y, bW, b.h);
+
+          ctx.fillStyle = b.theme.roof;
+          ctx.fillRect(isLeft ? bX + bW - 4 : bX, b.y, 4, b.h);
+          ctx.fillRect(bX, b.y, bW, 4);
+
+          const winCols = Math.max(1, Math.floor((bW - 12) / 10));
+          const winRows = Math.floor((b.h - 16) / 14);
+          for (let r = 0; r < winRows; r++) {
+            for (let c = 0; c < winCols; c++) {
+              const lit = Math.sin(b.y * 0.1 + r * 1.5 + c * 2.3) > -0.15;
+              if (lit) {
+                ctx.fillStyle = b.theme.window;
+                ctx.globalAlpha = 0.55;
+                ctx.fillRect(bX + 6 + c * 10, b.y + 10 + r * 14, 6, 8);
+                ctx.globalAlpha = 1.0;
+              }
+            }
+          }
+
+          if (b.hasHelipad && bW >= 40) {
+            ctx.strokeStyle = '#eab308';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(bX + bW / 2, b.y + 16, 10, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.fillStyle = '#eab308';
+            ctx.font = 'bold 9px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('H', bX + bW / 2, b.y + 19);
+          } else if (b.hasAntenna) {
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(bX + bW / 2, b.y);
+            ctx.lineTo(bX + bW / 2, b.y - 14);
+            ctx.stroke();
+
+            const isLit = Math.sin((currentTime || 0) * 0.007 + b.y) > 0.1;
+            if (isLit) {
+              ctx.fillStyle = '#ef4444';
+              ctx.beginPath();
+              ctx.arc(bX + bW / 2, b.y - 14, 2.5, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+
+          if (b.neonSign && bW >= 36) {
+            ctx.fillStyle = '#06b6d4';
+            ctx.font = '900 8px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(b.neonSign, bX + bW / 2, b.y + b.h - 8);
+          }
+        }
+      });
+
+      // 3. Sidewalks & Curbing
+      const sidewalkW = 16;
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(road.left - sidewalkW, 0, sidewalkW, height);
+      ctx.fillRect(road.left + road.width, 0, sidewalkW, height);
+
+      const curbW = 6;
+      const stripeH = 26;
+      const curbShift = Math.floor(roadOffset % (stripeH * 2));
+      for (let y = -stripeH * 2; y < height + stripeH; y += stripeH) {
+        const isRed = Math.floor((y - curbShift) / stripeH) % 2 === 0;
+        ctx.fillStyle = isRed ? '#dc2626' : '#f8fafc';
+        ctx.fillRect(road.left - curbW, y + curbShift, curbW, stripeH);
+        ctx.fillRect(road.left + road.width, y + curbShift, curbW, stripeH);
+      }
+
+      // 4. Two-Lane Racing Highway Asphalt
+      ctx.fillStyle = '#111318';
+      ctx.fillRect(road.left, 0, road.width, height);
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.015)';
+      for (let y = 0; y < height; y += 4) {
+        ctx.fillRect(road.left, y, road.width, 1);
+      }
+
+      // Center Lane Divider
+      ctx.strokeStyle = '#eab308';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([26, 26]);
+      ctx.lineDashOffset = -roadOffset;
+      ctx.beginPath();
+      ctx.moveTo(road.left + road.laneWidth, 0);
+      ctx.lineTo(road.left + road.laneWidth, height);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // 5. Skid Marks
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+      skidMarks.forEach(s => {
+        ctx.fillRect(s.x - 3, s.y, 6, 12);
+      });
+
+      // 6. Draw Both Cars at their Dynamic Physical Positions
+      const carW = 42;
+      const carH = 78;
+
+      // Draw Competitor 1 (Lane 1)
+      drawCompetitorCar(
+        road.p1X,
+        player1.currentY,
+        carW,
+        carH,
+        player1.color,
+        player1.roofColor
+      );
+
+      // Draw Competitor 2 (Lane 2)
+      drawCompetitorCar(
+        road.p2X,
+        player2.currentY,
+        carW,
+        carH,
+        player2.color,
+        player2.roofColor
+      );
+
+      // 7. ULTRA-REALISTIC VOLUMETRIC EXHAUST SMOKE RENDERING
+      smokeParticles.forEach(p => {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, Math.min(1, p.alpha));
+
+        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.radius);
+
+        if (p.isFire) {
+          grad.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+          grad.addColorStop(0.3, p.colorHue === 185 ? 'rgba(34, 211, 238, 0.7)' : 'rgba(245, 158, 11, 0.7)');
+          grad.addColorStop(0.7, 'rgba(75, 85, 99, 0.3)');
+          grad.addColorStop(1, 'rgba(30, 41, 59, 0)');
+        } else {
+          grad.addColorStop(0, 'rgba(200, 210, 220, 0.5)');
+          grad.addColorStop(0.4, 'rgba(90, 100, 110, 0.35)');
+          grad.addColorStop(0.75, 'rgba(45, 50, 60, 0.18)');
+          grad.addColorStop(1, 'rgba(20, 24, 30, 0)');
+        }
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+    }
+
+    // Realistic Car Renderer with Dual Exhaust Pipes & Xenon Headlights
+    function drawCompetitorCar(x, y, w, h, bodyColor, roofColor) {
+      ctx.save();
+      ctx.translate(x, y);
+
+      const halfW = w / 2;
+      const halfH = h / 2;
+
+      // ==========================================
+      // REALISTIC HEADLIGHTS (BORDERLESS SOFT LIGHT BEAMS)
+      // ==========================================
+      const beamReach = 180;
+      const beamSpread = 38;
+
+      const groundGlow = ctx.createRadialGradient(0, -halfH - 50, 5, 0, -halfH - 50, 110);
+      groundGlow.addColorStop(0, 'rgba(254, 240, 138, 0.22)');
+      groundGlow.addColorStop(0.5, 'rgba(254, 240, 138, 0.08)');
+      groundGlow.addColorStop(1, 'rgba(254, 240, 138, 0.0)');
+      ctx.fillStyle = groundGlow;
+      ctx.beginPath();
+      ctx.arc(0, -halfH - 50, 110, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Left Natural Xenon Light Cone
+      const leftLightGrad = ctx.createLinearGradient(-halfW + 6, -halfH + 2, -halfW - 8, -halfH - beamReach);
+      leftLightGrad.addColorStop(0, 'rgba(255, 255, 240, 0.65)');
+      leftLightGrad.addColorStop(0.15, 'rgba(254, 240, 138, 0.35)');
+      leftLightGrad.addColorStop(0.65, 'rgba(254, 240, 138, 0.12)');
+      leftLightGrad.addColorStop(1, 'rgba(254, 240, 138, 0.0)');
+
+      ctx.fillStyle = leftLightGrad;
+      ctx.beginPath();
+      ctx.moveTo(-halfW + 4, -halfH + 2);
+      ctx.lineTo(-halfW - beamSpread, -halfH - beamReach);
+      ctx.lineTo(-halfW + 12, -halfH - beamReach);
+      ctx.lineTo(-halfW + 10, -halfH + 2);
+      ctx.closePath();
+      ctx.fill();
+
+      // Right Natural Xenon Light Cone
+      const rightLightGrad = ctx.createLinearGradient(halfW - 6, -halfH + 2, halfW + 8, -halfH - beamReach);
+      rightLightGrad.addColorStop(0, 'rgba(255, 255, 240, 0.65)');
+      rightLightGrad.addColorStop(0.15, 'rgba(254, 240, 138, 0.35)');
+      rightLightGrad.addColorStop(0.65, 'rgba(254, 240, 138, 0.12)');
+      rightLightGrad.addColorStop(1, 'rgba(254, 240, 138, 0.0)');
+
+      ctx.fillStyle = rightLightGrad;
+      ctx.beginPath();
+      ctx.moveTo(halfW - 10, -halfH + 2);
+      ctx.lineTo(halfW - 12, -halfH - beamReach);
+      ctx.lineTo(halfW + beamSpread, -halfH - beamReach);
+      ctx.lineTo(halfW - 4, -halfH + 2);
+      ctx.closePath();
+      ctx.fill();
+
+      // Projector Lamp Bulbs
+      const bulbGlowL = ctx.createRadialGradient(-halfW + 7, -halfH + 2, 1, -halfW + 7, -halfH + 2, 7);
+      bulbGlowL.addColorStop(0, '#ffffff');
+      bulbGlowL.addColorStop(0.5, '#fef08a');
+      bulbGlowL.addColorStop(1, 'rgba(254, 240, 138, 0)');
+      ctx.fillStyle = bulbGlowL;
+      ctx.beginPath();
+      ctx.arc(-halfW + 7, -halfH + 2, 7, 0, Math.PI * 2);
+      ctx.fill();
+
+      const bulbGlowR = ctx.createRadialGradient(halfW - 7, -halfH + 2, 1, halfW - 7, -halfH + 2, 7);
+      bulbGlowR.addColorStop(0, '#ffffff');
+      bulbGlowR.addColorStop(0.5, '#fef08a');
+      bulbGlowR.addColorStop(1, 'rgba(254, 240, 138, 0)');
+      ctx.fillStyle = bulbGlowR;
+      ctx.beginPath();
+      ctx.arc(halfW - 7, -halfH + 2, 7, 0, Math.PI * 2);
+      ctx.fill();
+
+      // ==========================================
+      // PHYSICAL CAR CHASSIS, TIRES & EXHAUST PORTS
+      // ==========================================
+      // Drop Shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+      ctx.beginPath();
+      ctx.roundRect(-halfW - 3, -halfH + 4, w + 6, h, 8);
+      ctx.fill();
+
+      // Dual Exhaust Steel Pipes at Rear
+      ctx.fillStyle = '#71717a';
+      ctx.fillRect(-halfW + 5, halfH - 2, 5, 4);
+      ctx.fillRect(halfW - 10, halfH - 2, 5, 4);
+      ctx.fillStyle = '#09090b';
+      ctx.fillRect(-halfW + 6, halfH + 1, 3, 2);
+      ctx.fillRect(halfW - 9, halfH + 1, 3, 2);
+
+      // Racing Tires
+      ctx.fillStyle = '#09090b';
+      ctx.fillRect(-halfW - 4, -halfH + 10, 5, 16);
+      ctx.fillRect(halfW - 1, -halfH + 10, 5, 16);
+      ctx.fillRect(-halfW - 4, halfH - 24, 5, 18);
+      ctx.fillRect(halfW - 1, halfH - 24, 5, 18);
+
+      // Main Aerodynamic Body
+      ctx.fillStyle = bodyColor;
+      ctx.beginPath();
+      ctx.roundRect(-halfW, -halfH, w, h, [12, 12, 8, 8]);
+      ctx.fill();
+
+      // Racing Center Stripes
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+      ctx.fillRect(-halfW + 11, -halfH, 4, h);
+      ctx.fillRect(halfW - 15, -halfH, 4, h);
+
+      // Cockpit Tinted Glass & Aerodynamic Roof
+      ctx.fillStyle = '#090d16';
+      ctx.beginPath();
+      ctx.roundRect(-halfW + 5, -halfH + 24, w - 10, 30, 5);
+      ctx.fill();
+
+      ctx.fillStyle = roofColor;
+      ctx.beginPath();
+      ctx.roundRect(-halfW + 7, -halfH + 29, w - 14, 18, 4);
+      ctx.fill();
+
+      // Rear Taillights (Red LED Bar)
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(-halfW + 4, halfH - 3, 8, 3);
+      ctx.fillRect(halfW - 12, halfH - 3, 8, 3);
+
+      ctx.restore();
+    }
+
+    // Start Simulation Loop
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>
