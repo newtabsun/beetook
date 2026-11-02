@@ -342,7 +342,7 @@ export async function savePost(p: PostInput, mode: 'draft' | 'publish', onProgre
   const row = {
     user_id: me, kind: p.kind, media_urls, caption: p.caption.trim(), caption_html: p.captionHtml, edit,
     thumbnail_url, privacy: st.privacy, allow_download: st.download, allow_comments: st.comments, allow_duet: st.duet,
-    age_restricted: st.ageRestricted, partner_enabled: st.partner ?? true,
+    age_restricted: st.ageRestricted, partner_enabled: st.partner !== false,
     status: mode === 'draft' ? 'draft' : scheduled ? 'scheduled' : 'published',
     publish_at: new Date(scheduled ? p.scheduleAt! : Date.now()).toISOString(),
   };
@@ -399,7 +399,7 @@ export async function deletePost(id: string) {
   invalidate('me:');
 }
 export const MAX_PINS = 3;
-export type PostPatch = Partial<Pick<Post, 'caption' | 'caption_html' | 'privacy' | 'allow_comments' | 'allow_download' | 'allow_duet' | 'pinned'>>;
+export type PostPatch = Partial<Pick<Post, 'caption' | 'caption_html' | 'privacy' | 'allow_comments' | 'allow_download' | 'allow_duet' | 'pinned' | 'partner_enabled'>>;
 /** Owner-only edit; RLS rejects others (0 rows updated → error). */
 export async function updatePostFields(id: string, patch: PostPatch) {
   const me = await uid();

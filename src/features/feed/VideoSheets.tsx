@@ -168,6 +168,16 @@ export function OwnerSheet({ post, onClose, onChange, onDeleted }: {
             </Pressable>
           );
         })}
+        {(() => {
+          const on = cur.partner_enabled !== false;
+          return (
+            <Pressable accessibilityRole="switch" accessibilityLabel="Partner" accessibilityState={{ checked: on }} disabled={busy} style={s.row}
+              onPress={() => void apply({ partner_enabled: !on }, `Partner ${!on ? 'turned on' : 'turned off'}`, () => updatePostFields(cur.id, { partner_enabled: !on }))}>
+              <Text style={s.rowT}>Partner</Text>
+              <View style={[s.sw, on && { backgroundColor: O }]}><View style={[s.knob, on && { transform: [{ translateX: 20 }] }]} /></View>
+            </Pressable>
+          );
+        })()}
         <Pressable style={s.row} disabled={busy} accessibilityLabel="Pin to profile"
           onPress={() => void apply({ pinned: !cur.pinned }, cur.pinned ? 'Unpinned from your profile' : 'Pinned to your profile', () => setPinned(cur.id, !cur.pinned))}>
           <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}><Icon name="pin" size={16} color={O} /><Text style={s.rowT}>{cur.pinned ? 'Unpin from profile' : 'Pin to profile'}</Text></View>

@@ -122,7 +122,7 @@ export function PostFlowScreen({ mode = 'upload', initial, drafts, onPost, onDra
       {step === 1 && (<>
         <RichTextInput label="Caption" multiline value={post.captionHtml ?? post.caption} placeholder="Write a caption… #tags"
           onChange={(h) => setPost({ ...post, captionHtml: h, caption: richToPlain(h) })} />
-        <PartnerToggle on={opts.partner} set={(v) => setPost({ ...post, options: { ...opts, partner: v } })} />
+        <PartnerToggle on={opts.partner !== false} set={(v) => setPost({ ...post, options: { ...opts, partner: v } })} />
         <PostOptionsPanel value={opts} onChange={(o) => setPost({ ...post, options: o })} captionHtml={post.captionHtml ?? post.caption}
           images={post.kind === 'photos' ? post.sources : undefined} />
         {!post.caption.trim() && <Text style={s.muted}>Add a caption to continue.</Text>}</>)}

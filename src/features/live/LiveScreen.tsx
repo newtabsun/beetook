@@ -4,8 +4,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Image, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { createLiveRoom, fetchLiveRooms, initSeats, type LiveRoom } from '../../lib/api';
-import { canGoLive } from '../../lib/liveAccess';
-import { LIVE_DENIED_MESSAGE } from '../../lib/liveRule';
+import { liveAccess } from '../../lib/liveAccess';
+import { LiveAccessCard } from './LiveAccessCard';
 import { LiveRoomView } from './LiveRoom';
 import { BgPicker, setLiveBg, useLiveBg } from './BgPicker';
 import { GoLiveCamera } from './GoLiveCamera';
@@ -160,12 +160,14 @@ export function LiveScreen({ autoCreate, onFull }: { autoCreate?: boolean; onFul
   const [err, setErr] = useState('');
   const [q, setQ] = useState('');
   const [creating, setCreating] = useState(false);
+  const [denied, setDenied] = useState<number | null>(null);
   const [me, setMe] = useState<string>();
   // Going live needs VIP or 1,000+ followers (also enforced by the server).
   const startCreate = useCallback(async () => {
     if (!requireSignIn()) return;
     try {
-      if (await canGoLive()) setCreating(true); else notify('Live access', LIVE_DENIED_MESSAGE);
+      const a = await liveAccess();
+      if (a.allowed) setCreating(true); else setDenied(a.followers);
     } catch (e) { notify('Could not start live', friendlyError(e)); }
   }, []);
   useEffect(() => { if (autoCreate) void startCreate(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -199,6 +201,8 @@ export function LiveScreen({ autoCreate, onFull }: { autoCreate?: boolean; onFul
   const [featured, ...rest] = list;
   const Cover = ({ r }: { r: LiveRoom }) => r.cover_url ? <Image source={{ uri: r.cover_url }} style={s.poster} /> : <View style={[s.poster, { backgroundColor: '#222' }]} />;
   return (
+    <>
+    {denied !== null && <LiveAccessCard followers={denied} onClose={() => setDenied(null)} />}
     <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 110 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 20 }}>
         <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#FF3B30' }} />
@@ -232,6 +236,7 @@ export function LiveScreen({ autoCreate, onFull }: { autoCreate?: boolean; onFul
         <View style={s.empty}><Text style={[s.host, { fontSize: 14 }]}>{err || 'No live rooms found'}</Text><Text style={s.sub}>{q ? 'Try a different search.' : 'Tap Go Live to start one.'}</Text></View>
       )}
     </ScrollView>
+    </>
   );
 }
 

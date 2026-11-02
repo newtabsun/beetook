@@ -54,10 +54,10 @@ type Sheet =
   | { kind: 'confirm'; title: string; body: string; action: string; run: () => void } | { kind: 'more' };
 type Panel = null | 'gift' | 'guest' | 'game' | 'settings' | 'share';
 
-function Action({ icon, label, badge, active, danger, fill, onPress }: { icon: IconName; label: string; badge?: number; active?: boolean; danger?: boolean; fill?: string; onPress: () => void }) {
+function Action({ icon, glyph, label, badge, active, danger, fill, onPress }: { icon?: IconName; glyph?: string; label: string; badge?: number; active?: boolean; danger?: boolean; fill?: string; onPress: () => void }) {
   return (
     <Pressable accessibilityLabel={label} onPress={onPress} style={[s.act, danger ? s.actDanger : active ? s.actOn : null]}>
-      <Icon name={icon} size={19} color={danger ? '#FF6B5E' : active ? OR : fill ?? '#fff'} fill={fill ?? 'none'} />
+      {glyph ? <Text style={{ color: active ? OR : '#fff', fontWeight: '900', fontSize: 19 }}>{glyph}</Text> : <Icon name={icon!} size={19} color={danger ? '#FF6B5E' : active ? OR : fill ?? '#fff'} fill={fill ?? 'none'} />}
       {badge ? <View style={s.badge}><Text style={s.badgeT}>{badge}</Text></View> : null}
     </Pressable>
   );
@@ -740,7 +740,6 @@ function LiveRoomInner({ room, onClose, others, onPick, onSwipe }: { room: LiveR
       <BottomSheet onClose={close}>
         <Item icon="send" label="Share live" onPress={() => { close(); openShare(); }} />
         {isHost && <Item icon="settings" label="Live settings" onPress={() => { close(); setPanel('settings'); }} />}
-        {!isHost && <Item icon="users" label="Partner" onPress={() => { close(); setPartnerOpen(true); }} />}
         {isHost
           ? <Item icon="logout" danger label="End live" onPress={() => confirm('End this live?', 'Everyone in the room will be disconnected.', 'End live', () => void endLive())} />
           : <Item icon="logout" danger label="Leave live" onPress={() => confirm('Leave this live?', onSeat ? 'You will also leave your seat.' : 'You can come back anytime.', 'Leave', leave)} />}
@@ -1059,7 +1058,7 @@ function LiveRoomInner({ room, onClose, others, onPick, onSwipe }: { room: LiveR
           <Action icon="userPlus" label={isHost ? 'Seat requests' : 'Join a seat'} badge={isHost ? requests.length : undefined} active={panel === 'guest'} onPress={() => setPanel(panel === 'guest' ? null : 'guest')} />
           {isHost && <Action icon="gamepad" label="Live games" active={panel === 'game'} onPress={() => setPanel(panel === 'game' ? null : 'game')} />}
           {!isHost && <Action icon="send" label="Share live" active={panel === 'share'} onPress={() => (panel === 'share' ? setPanel(null) : openShare())} />}
-          {!isHost && <Action icon="logout" danger label="Leave live" onPress={() => confirm('Leave this live?', onSeat ? 'You will also leave your seat.' : 'You can come back anytime.', 'Leave', leave)} />}
+          {!isHost && <Action glyph="P" label="Partner" active={partnerOpen} onPress={() => setPartnerOpen(true)} />}
           {isHost && <Action icon="more" label="More" onPress={() => setSheet({ kind: 'more' })} />}
         </View>)}
         {!giftsOn && !kbd && <Text style={[s.hint, { marginTop: 6 }]}>Gifts are disabled</Text>}
