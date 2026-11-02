@@ -26,7 +26,7 @@ const BOOST_STATE = { active: 'In progress', completed: 'Completed', expired: 'E
 type Mode = null | 'buy' | 'convert' | 'redeem';
 const FILTERS = [
   ['all', 'All'], ['balance_purchased', 'Purchased'], ['balance_earnings', 'Earnings'], ['purchase', 'Coin purchases'],
-  ['gift_sent', 'Gifts sent'], ['gift_received', 'Gifts received'],
+  ['gift_sent', 'Gifts sent'], ['gift_received', 'Gifts received'], ['partner_commission', 'Partner commission'],
   ['live_join_paid', 'Live joining fees paid'], ['live_join_income', 'Live joining income'],
   ['group_join_paid', 'Group joining fees paid'], ['group_join_income', 'Group joining income'],
   ['group_msg_paid', 'Group message fees'], ['group_msg_income', 'Group message income'],

@@ -37,6 +37,7 @@ import { Component } from 'react';
 import { BackHandler } from 'react-native';
 import { closeLiveRoom, reapLive } from '../../lib/livekit';
 import { useLiveKit } from './useLiveKit';
+import { PartnerJoinScreen } from '../partner/PartnerJoin';
 import { usePeerVideo } from './usePeerVideo';
 import { LiveVideo, TileCtlContext, VideoOfContext, type TileCtl } from './LiveVideo';
 
@@ -275,6 +276,7 @@ function LiveRoomInner({ room, onClose, others, onPick, onSwipe }: { room: LiveR
   const [justFollowed, setJustFollowed] = useState<string[]>([]);
   const [sheet, setSheet] = useState<Sheet | null>(null);
   const [panel, setPanel] = useState<Panel>(null);
+  const [partnerOpen, setPartnerOpen] = useState(false);
   const [composer, setComposer] = useState(false);
   const [draft, setDraft] = useState('');
   const [giftQty, setGiftQty] = useState(1);
@@ -738,6 +740,7 @@ function LiveRoomInner({ room, onClose, others, onPick, onSwipe }: { room: LiveR
       <BottomSheet onClose={close}>
         <Item icon="send" label="Share live" onPress={() => { close(); openShare(); }} />
         {isHost && <Item icon="settings" label="Live settings" onPress={() => { close(); setPanel('settings'); }} />}
+        {!isHost && <Item icon="users" label="Partner" onPress={() => { close(); setPartnerOpen(true); }} />}
         {isHost
           ? <Item icon="logout" danger label="End live" onPress={() => confirm('End this live?', 'Everyone in the room will be disconnected.', 'End live', () => void endLive())} />
           : <Item icon="logout" danger label="Leave live" onPress={() => confirm('Leave this live?', onSeat ? 'You will also leave your seat.' : 'You can come back anytime.', 'Leave', leave)} />}
@@ -946,6 +949,7 @@ function LiveRoomInner({ room, onClose, others, onPick, onSwipe }: { room: LiveR
 
       {giftBanner && <View testID="gift-banner" style={{ position: 'absolute', top: 90, alignSelf: 'center', backgroundColor: 'rgba(255,165,0,0.9)', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6, zIndex: 50 }}><Text style={{ color: '#000', fontWeight: '800', fontSize: 12 }}>{giftBanner}</Text></View>}
       {/* panels */}
+      {partnerOpen && <PartnerJoinScreen inviterId={room.host_id} onClose={() => setPartnerOpen(false)} />}
       {panel && (
         <View style={s.panel}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>

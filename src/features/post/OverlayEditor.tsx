@@ -21,7 +21,7 @@ import { VideoTimeline } from '../editor/Timeline';
 import { EditedVideo } from '../editor/PostMedia';
 import { catLabel, THEME105_CATS, THEMES_105 } from '../editor/themes105';
 import { Theme105Stage } from '../editor/themes105/Theme105Stage';
-import { DEFAULT_PUBLISH_OPTIONS, parseSchedule, PostOptionsPanel, scheduleError } from './PostOptions';
+import { DEFAULT_PUBLISH_OPTIONS, parseSchedule, PartnerToggle, PostOptionsPanel, scheduleError } from './PostOptions';
 import type { PostDraft } from './usePosts';
 
 type Tool = 'theme' | 'duration' | 'filters' | 'adjust' | 'trim' | 'crop' | 'fx' | 'speed' | 'text' | 'stickers' | 'overlay' | 'audio';
@@ -373,6 +373,7 @@ export function OverlayEditor({ post, update, busy, progress, onBack, onPublish,
                 <RichTextInput label="Caption" multiline value={post.captionHtml ?? post.caption} placeholder="Write a caption… #tags @mentions"
                   onChange={(h) => update((x) => ({ ...x, captionHtml: h, caption: richToPlain(h) }))} />
                 {!post.caption.trim() && <Text style={st.muted}>Add a caption to post.</Text>}
+                <PartnerToggle on={opts.partner} set={(v) => update((x) => ({ ...x, options: { ...opts, partner: v } }))} />
                 <PostOptionsPanel part="cover" value={opts} onChange={(o) => update((x) => ({ ...x, options: o }))} captionHtml={post.captionHtml ?? post.caption}
                   images={isVideo ? undefined : post.sources} />
               </>)}

@@ -23,6 +23,8 @@ const POSTS_TTL = 5 * 60_000;
 import { APP_VERSION, type MenuSheet } from './ProfileMenuSheets';
 import { MarqueeRich, RichTextInput, RichTextView, richToPlain } from '../../components/RichText';
 import { PublicId } from '../../components/PublicId';
+import { PartnerBadge } from '../partner/PartnerBadge';
+import { partnerOverview } from '../../lib/partner';
 import { VideoGrid, useGridPaging } from '../../components/VideoGrid';
 import { FullscreenPlayer } from '../feed/FullscreenPlayer';
 import { linkHref, readStyle, telHref, writeStyle, type ActionButton, type ProfileStyle } from '../../lib/profileStyle';
@@ -79,6 +81,8 @@ export function ProfileScreen({ onOpenNotes, onOpen }: { onOpenNotes: () => void
   const [err, setErr] = useState('');
   const [editing, setEditing] = useState(false);
   const [menu, setMenu] = useState(false);
+  const [plevel, setPlevel] = useState<number | null>(null);
+  useEffect(() => { partnerOverview().then((o) => setPlevel(o.level)).catch(() => undefined); }, []);
   const [coins, setCoins] = useState<number | null>(null);
   useEffect(() => { if (menu) getWallet().then(setCoins).catch(() => setCoins(null)); }, [menu]);
   const [draft, setDraft] = useState<Profile | null>(null);
@@ -195,6 +199,7 @@ export function ProfileScreen({ onOpenNotes, onOpen }: { onOpenNotes: () => void
               <VipAvatar userId={p.id} uri={p.avatar_url} name={initials(name)} size={96} />
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Text style={s.name}>@<RichTextView html={st.usernameHtml} style={s.name} /></Text></View>
               <PublicId p={p} />
+              {plevel !== null && <View style={{ marginTop: 6 }}><PartnerBadge level={plevel} scale={1.1} /></View>}
               <View style={s.stats}>
                 {stats.map(([l, n], i) => (
                   <View key={l} style={[s.stat, i > 0 && s.statDiv]}><Text style={s.statN}>{formatNum(n ?? 0)}</Text><Text style={s.statL}>{l}</Text></View>
@@ -241,6 +246,7 @@ export function ProfileScreen({ onOpenNotes, onOpen }: { onOpenNotes: () => void
             {([
               ['wallet', 'Wallet', coins === null ? 'Coins & history' : `${formatNum(coins)} coins`, () => onOpen('wallet')],
               ['trending', 'Analytics', 'Views, followers & top videos', () => onOpen('analytics')],
+              ['users', 'My partners', 'Invite by ID & earn commission', () => onOpen('partners')],
               ['store', 'Marketplace', 'Sell and buy safely with escrow', () => onOpen('market')],
               ['crown', 'VIP', '12,500 coins / month', () => onOpen('vip')],
               ['settings', 'Settings & privacy', '', () => onOpen('settings')],

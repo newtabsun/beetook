@@ -20,7 +20,7 @@ export interface Post {
   sound_name?: string | null; sound_id?: string | null; boosted_until?: string | null;
   caption_html?: string; thumbnail_url?: string | null; privacy?: 'everyone' | 'friends' | 'only_me';
   allow_download?: boolean; allow_comments?: boolean; allow_duet?: boolean; age_restricted?: boolean; location?: string;
-  liked?: boolean; saved?: boolean; pinned?: boolean;
+  liked?: boolean; saved?: boolean; pinned?: boolean; partner_enabled?: boolean;
 }
 export interface Comment { id: string; body: string; body_html?: string | null; parent_id?: string | null; reply_to_user?: string | null; created_at: string; user_id: string; author?: { username: string | null; avatar_url?: string | null } | null }
 export interface LiveRoom { id: string; host_id: string; title: string; category: string; cover_url: string | null; created_at: string; mode?: 'video' | 'audio'; layout?: 'fullscreen' | 'seats' | 'seats2' | 'seats3'; bg?: string | null; join_fee?: number; host?: { display_name: string | null; username: string | null } | null }
@@ -261,7 +261,7 @@ export async function uploadStickerImage(uri: string, mime?: string | null, name
 
 export interface PostSettings {
   thumbnail: string | null; privacy: 'everyone' | 'friends' | 'only_me'; download: boolean; comments: boolean;
-  duet: boolean; ageRestricted: boolean;
+  duet: boolean; ageRestricted: boolean; partner?: boolean;
 }
 export interface PostInput { id?: string; kind: Post['kind']; sources: string[]; caption: string; captionHtml: string; edit?: MediaEdit; scheduleAt?: number; settings: PostSettings }
 
@@ -342,7 +342,7 @@ export async function savePost(p: PostInput, mode: 'draft' | 'publish', onProgre
   const row = {
     user_id: me, kind: p.kind, media_urls, caption: p.caption.trim(), caption_html: p.captionHtml, edit,
     thumbnail_url, privacy: st.privacy, allow_download: st.download, allow_comments: st.comments, allow_duet: st.duet,
-    age_restricted: st.ageRestricted,
+    age_restricted: st.ageRestricted, partner_enabled: st.partner ?? true,
     status: mode === 'draft' ? 'draft' : scheduled ? 'scheduled' : 'published',
     publish_at: new Date(scheduled ? p.scheduleAt! : Date.now()).toISOString(),
   };

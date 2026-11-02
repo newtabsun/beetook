@@ -18,7 +18,7 @@ export function usePosts() {
       const rows = await fetchMyPosts('draft');
       remote = rows.map((r) => ({ id: r.id, kind: r.kind, sources: r.media_urls, caption: r.caption, captionHtml: r.caption_html || r.caption, edit: r.edit ?? undefined, remote: true,
         options: { ...DEFAULT_PUBLISH_OPTIONS, thumbnail: r.thumbnail_url ?? null, privacy: r.privacy ?? 'everyone', download: r.allow_download ?? true,
-          comments: r.allow_comments ?? true, duet: r.allow_duet ?? true, ageRestricted: r.age_restricted ?? false} }));
+          comments: r.allow_comments ?? true, duet: r.allow_duet ?? true, ageRestricted: r.age_restricted ?? false, partner: r.partner_enabled ?? true} }));
     } catch { /* not signed in / offline: keep list */ }
     const ids = new Set(pending.map((x) => x.id));
     setDrafts((prev) => [...pending, ...(remote ?? prev.filter((d) => !d.pending)).filter((d) => !ids.has(d.id))]);

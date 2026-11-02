@@ -9,10 +9,10 @@ import { colors } from '../../theme';
 export type Privacy = 'everyone' | 'friends' | 'only_me';
 export interface PublishOptions {
   thumbnail: string | null; privacy: Privacy; download: boolean; comments: boolean; duet: boolean;
-  ageRestricted: boolean; scheduleAt: string | null;
+  ageRestricted: boolean; scheduleAt: string | null; partner: boolean;
 }
 export const DEFAULT_PUBLISH_OPTIONS: PublishOptions = {
-  thumbnail: null, privacy: 'everyone', download: true, comments: true, duet: true, ageRestricted: false, scheduleAt: null,
+  thumbnail: null, privacy: 'everyone', download: true, comments: true, duet: true, ageRestricted: false, scheduleAt: null, partner: true,
 };
 const PRIVACY: { key: Privacy; label: string }[] = [
   { key: 'everyone', label: 'Everyone' }, { key: 'friends', label: 'Friends/Followers' }, { key: 'only_me', label: 'Only me' },
@@ -41,6 +41,15 @@ function Toggle({ label, hint, on, set }: { label: string; hint: string; on: boo
       <View style={{ flex: 1 }}><Text style={s.tl}>{label}</Text><Text style={s.th}>{hint}</Text></View>
       <View style={[s.track, on && { backgroundColor: colors.primary }]}><View style={[s.knob, { left: on ? 22 : 2 }]} /></View>
     </Pressable>
+  );
+}
+
+/** Partner on/off for one post; shown right under the caption box. */
+export function PartnerToggle({ on, set }: { on: boolean; set: (v: boolean) => void }) {
+  return (
+    <View style={s.section}>
+      <Toggle label="Partner" hint={on ? 'Viewers can join your partners from this post' : 'Partner is hidden on this post'} on={on} set={set} />
+    </View>
   );
 }
 

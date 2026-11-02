@@ -1,7 +1,6 @@
 import { CrashNotice } from './modules/gpupixel-camera/CrashNotice';
 import { setStage } from './src/components/CrashGuard';
 import { DialogHost } from './src/components/DialogHost';
-import { NetworkBanner } from './src/components/NetworkBanner';
 import { Splash } from './src/components/Splash';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useState } from 'react';
@@ -22,6 +21,7 @@ import { ProfileScreen } from './src/features/profile/ProfileScreen';
 import { colors } from './src/theme';
 import { InboxScreen } from './src/features/inbox/InboxScreen';
 import { WalletScreen } from './src/features/wallet/WalletScreen';
+import { PartnerScreen } from './src/features/partner/PartnerScreen';
 import { ProfileMenuPage, type MenuSheet } from './src/features/profile/ProfileMenuSheets';
 import { GroupsScreen } from './src/features/social/GroupsScreen';
 import { MarketScreen } from './src/features/social/MarketScreen';
@@ -116,6 +116,7 @@ function Main({ userId }: { userId: string }) {
   else if (sub === 'groups') body = <GroupsScreen onBack={back} />;
   else if (sub === 'market') body = <MarketScreen onBack={back} />;
   else if (sub === 'auth') body = <AuthScreen onBack={back} session={session} />;
+  else if (sub === 'partners') body = <PartnerScreen onBack={back} onUser={(id) => { setSub(null); setViewUser(id); }} />;
   else if (sub) body = <ProfileMenuPage kind={sub} onBack={back} onNavigate={setSub} />;
   else if (notesOpen) body = <NotesScreen onBack={() => setNotesOpen(false)} />;
   else if (tab === 'home') body = <FeedScreen key={feedKey} visible={!createOpen} onUser={setViewUser} onSound={setSound} onDuet={startDuet} />;
@@ -200,7 +201,6 @@ export default function App() {
         {session.session ? <Main key={session.session.user.id} userId={session.session.user.id} /> : guest ? <GuestMain /> : <AuthScreen session={session} onGuest={() => setGuest(true)} />}
         </KeyboardAvoidingView>
         <DialogHost />
-        <NetworkBanner />
         <CrashNotice />
       </SafeAreaView>
     </SafeAreaProvider>

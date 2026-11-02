@@ -6,7 +6,8 @@ import { AppState, Platform } from 'react-native';
 /** `cellular` = connected through mobile data (false on Wi-Fi, web or when unknown). */
 export interface NetState { online: boolean; slow: boolean; cellular: boolean }
 
-const PROBE = 'https://www.gstatic.com/generate_204';
+const PROBES = ['https://www.gstatic.com/generate_204', 'https://klxynisbmxqmyszkdrxj.supabase.co/auth/v1/health', 'https://cloudflare.com/cdn-cgi/trace'];
+let fails = 0;
 const SLOW_MS = 2500;
 let state: NetState = { online: true, slow: false, cellular: false };
 const subs = new Set<(n: NetState) => void>();
@@ -34,17 +35,22 @@ function update(next: Partial<NetState>) {
   subs.forEach((f) => f(state));
 }
 
-/** Measures reachability and latency; updates the shared state. */
+/** Measures reachability and latency; updates the shared state.
+ *  Several independent endpoints are tried at once (any HTTP answer = online) and "offline" is only reported
+ *  after two failed rounds in a row, so one blocked or slow host never shows a false "No internet". */
 export async function probe(): Promise<boolean> {
   const t0 = Date.now();
   const ctl = new AbortController();
   const to = setTimeout(() => ctl.abort(), 8000);
   try {
-    await fetch(`${PROBE}?t=${t0}`, { cache: 'no-store', signal: ctl.signal, ...(Platform.OS === 'web' ? { mode: 'no-cors' as RequestMode } : {}) });
+    await Promise.any(PROBES.map((u) => fetch(`${u}${u.includes('?') ? '&' : '?'}t=${t0}`, { cache: 'no-store', signal: ctl.signal, ...(Platform.OS === 'web' ? { mode: 'no-cors' as RequestMode } : {}) })));
+    fails = 0;
     update({ online: true, slow: Date.now() - t0 > SLOW_MS });
     return true;
   } catch {
-    update({ online: false });
+    fails += 1;
+    if (fails >= 2) update({ online: false });
+    else setTimeout(() => void probe(), 1500);
     return false;
   } finally { clearTimeout(to); }
 }
@@ -55,7 +61,7 @@ function start() {
   started = true;
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     window.addEventListener('online', () => void probe());
-    window.addEventListener('offline', () => update({ online: false }));
+    window.addEventListener('offline', () => { fails = 2; update({ online: false }); });
     if (typeof navigator !== 'undefined' && navigator.onLine === false) update({ online: false });
   }
   if (netModule && Platform.OS !== 'web') {

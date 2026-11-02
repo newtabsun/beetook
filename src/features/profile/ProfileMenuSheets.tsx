@@ -35,7 +35,7 @@ const FAQS = [
   ['How do I delete my account?', 'Settings → Danger zone → Remove account. Type DELETE to confirm.'],
 ];
 
-export type MenuSheet = 'analytics' | 'vip' | 'settings' | 'help' | 'about' | 'share' | 'rank' | 'follow';
+export type MenuSheet = 'analytics' | 'partners' | 'vip' | 'settings' | 'help' | 'about' | 'share' | 'rank' | 'follow';
 const open = (url: string) => void Linking.openURL(url).catch(() => notify('Could not open link'));
 const err = (e: unknown) => notify('Error', friendlyError(e));
 
@@ -558,6 +558,7 @@ export function ProfileMenuPage({ kind, onBack, onNavigate }: { kind: MenuSheet;
   const ref = useRef(kind); ref.current = kind;
   switch (kind) {
     case 'analytics': return <Analytics onBack={onBack} />;
+    case 'partners': return null; // rendered by App (needs profile navigation)
     case 'vip': return <VipPage onBack={onBack} />;
     case 'settings': return <SettingsPage onBack={onBack} onHelp={() => onNavigate('help')} />;
     case 'help': return <HelpPage onBack={onBack} />;

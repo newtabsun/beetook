@@ -19,6 +19,7 @@ import { isLowMemoryDevice } from '../../lib/device';
 import { Image as ExpoImage } from 'expo-image';
 import { isPlayed, setDownloadedOnly, useDownloadedOnly } from '../../lib/offline';
 import { Icon } from '../../components/Icons';
+import { PartnerJoinScreen } from '../partner/PartnerJoin';
 import { MarketScreen } from '../social/MarketScreen';
 import { SearchScreen } from '../search/SearchScreen';
 import { FullscreenPlayer } from './FullscreenPlayer';
@@ -148,6 +149,7 @@ export const Card = memo(function Card({ p: initial, height, onUser, onSound, me
   const [shares, setShares] = useState(p.share_count ?? 0);
   const [gone, setGone] = useState(false);
     const [giftOpen, setGiftOpen] = useState(false);
+  const [partnerOpen, setPartnerOpen] = useState(false);
   useEffect(() => { recordView(p.id).catch(() => undefined); }, [p.id]);
   const mine = p.user_id === me;
   const [liked, setLiked] = useState(!!p.liked);
@@ -181,7 +183,7 @@ export const Card = memo(function Card({ p: initial, height, onUser, onSound, me
   return (
     <View style={{ height, overflow: 'hidden', backgroundColor: '#000' }} onLayout={(e) => { const w = e.nativeEvent.layout.width; if (w && Math.abs(w - width) > 1) setWidth(w); }}>
       <WatchTracker id={p.id} active={active} />
-      {<PostMedia kind={p.kind} sources={p.media_urls} edit={p.edit ?? undefined} width={width} height={height} poster={p.thumbnail_url} active={active && !open && !shareOpen && !giftOpen && !orig} />}
+      {<PostMedia kind={p.kind} sources={p.media_urls} edit={p.edit ?? undefined} width={width} height={height} poster={p.thumbnail_url} active={active && !open && !shareOpen && !giftOpen && !partnerOpen && !orig} />}
       <View style={s.shade} pointerEvents="none" />
       <View style={s.rail}>
         <View style={{ marginBottom: 8 }}>
@@ -199,15 +201,20 @@ export const Card = memo(function Card({ p: initial, height, onUser, onSound, me
         <Pressable accessibilityLabel="Open sound" onPress={() => onSound(p)} style={s.disc}><Icon name="music" size={16} color={colors.primary} /></Pressable>
       </View>
       <View style={s.meta}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Text style={s.user} onPress={() => onUser(p.user_id)}>@<RichTextView html={usernameHtmlOf(p.author)} style={s.user} numberOfLines={1} /></Text><VipTag id={p.user_id} /></View>
+        {!mine && p.partner_enabled !== false && (
+          <Pressable accessibilityLabel="Partner" testID="partner-label" onPress={() => { if (requireSignIn()) setPartnerOpen(true); }} style={s.partnerPill}>
+            <Icon name="users" size={13} color="#000" />
+            <Text style={s.partnerT}>Partner</Text>
+          </Pressable>
+        )}
         {p.edit?.duet && (
           <Text testID="duet-link" style={s.duetT} onPress={() => void fetchPostById(p.edit!.duet!.postId).then((o) => (o ? setOrig(o) : notify('The original video is no longer available'))).catch((e: Error) => notify('Error', friendlyError(e)))}>
             Duet with {handleOf(p.edit.duet.username)}
           </Text>
         )}
         <FeedCaption html={p.caption_html || p.caption} />
-        <Pressable testID="sound-marquee" style={s.soundRow} onPress={() => onSound(p)}><Icon name="music" size={13} /><Text style={s.soundT} numberOfLines={1}>{soundOf(p)}</Text></Pressable>
       </View>
+      {partnerOpen && <PartnerJoinScreen inviterId={p.user_id} postId={p.id} onClose={() => setPartnerOpen(false)} />}
       {open && <Comments post={p} onClose={() => setOpen(false)} onCount={setComments} />}
       {opts && <ReportSheet post={p} onClose={() => setOpts(false)} />}
       {giftOpen && <GiftSheet recipient={p.user_id} recipientName={`@${p.author?.username ?? 'user'}`} postId={p.id} onSent={(_l, q) => setGifts((x) => x + q)} onClose={() => setGiftOpen(false)} />}
@@ -420,6 +427,8 @@ const s = StyleSheet.create({
   search: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   follow: { position: 'absolute', bottom: -10, alignSelf: 'center', width: 20, height: 20, borderRadius: 10, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   disc: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#111', borderWidth: 6, borderColor: '#222', alignItems: 'center', justifyContent: 'center' },
+  partnerPill: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#FFA500', borderRadius: 99, paddingHorizontal: 10, paddingVertical: 4, marginBottom: 2 },
+  partnerT: { color: '#000', fontWeight: '900', fontSize: 12 },
   soundRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   soundT: { color: '#fff', fontSize: 13, fontWeight: '600', flex: 1 },
   empty: { position: 'absolute', left: 24, right: 24, top: 96, bottom: 110, alignItems: 'center', justifyContent: 'center', gap: 8 },
