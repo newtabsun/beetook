@@ -129,12 +129,13 @@ export function MarqueeRich({ html, style }: { html: string; style?: TextStyle }
 }
 
 /** Toolbar (bold, underline, 10 colors) + input. Formatting applies to the selection, or to what you type next. */
-export function RichTextInput({ value, onChange, placeholder, multiline, label, onSend, sending }: { value: string; onChange: (html: string) => void; placeholder?: string; multiline?: boolean; label?: string; onSend?: () => void; sending?: boolean }) {
+export function RichTextInput({ value, onChange, placeholder, multiline, label, onSend, sending, freeColors }: { value: string; onChange: (html: string) => void; placeholder?: string; multiline?: boolean; label?: string; onSend?: () => void; sending?: boolean; freeColors?: boolean }) {
   const [segs, setSegs] = useState<Seg[]>(() => parseRich(value));
   useEffect(() => { if (!value) setSegs((p) => (p.length ? [] : p)); }, [value]);
   const [sel, setSel] = useState({ start: 0, end: 0 });
   const [typing, setTyping] = useState<Fmt>({});
-  const vip = useMyVip(); // only VIP can write in color; everyone can read colored text (RichTextView)
+  const myVip = useMyVip();
+  const vip = freeColors || myVip; // only VIP can write in color; everyone can read colored text (RichTextView)
   const emit = (n: Seg[]) => { setSegs(n); onChange(plain(n).trim() ? toHtml(n) : ''); };
   const text = plain(segs);
   const toggle = (patch: (f: Fmt) => Fmt) => {

@@ -37,6 +37,9 @@ import { DownloadOverlay } from './src/lib/download';
 import { GiftFxHost } from './src/features/gifts/GiftFxHost';
 import { initMediaCache } from './src/lib/offline';
 import { invalidate } from './src/lib/swr';
+import { warmFeed } from './src/lib/feedWarm';
+import { publishDuePosts } from './src/lib/api';
+import { useActiveInterval } from './src/lib/appActive';
 
 // Cache limit must be applied before the first video player exists.
 initMediaCache();
@@ -85,6 +88,9 @@ function Main({ userId }: { userId: string }) {
   useEffect(() => {
     if (Platform.OS === 'web' && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('wallet') === 'chapa') setSub('wallet');
   }, []);
+  // Right after login: prepare the first videos (list, covers, first seconds) and promote due scheduled posts.
+  useEffect(() => { void warmFeed(); void publishDuePosts(); }, []);
+  useActiveInterval(() => void publishDuePosts(), 60_000);
   useEffect(() => startPresence(userId), [userId]);
   useEffect(() => startUnread(userId), [userId]);
   // https://beetook.com/abebe (or /@abebe) opens that profile.

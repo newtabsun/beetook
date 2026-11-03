@@ -6,7 +6,8 @@ import { notify } from '../../lib/notify';
 import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ShareSheet, OwnerSheet } from './VideoSheets';
 import { ActivityIndicator, Dimensions, FlatList, Image, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
-import { fetchPostById, addComment, deleteComment, fetchCommentCount, fetchComments, fetchFeed, fetchForYou, formatNum, recordView, recordWatch, setFollow, subscribeTables, soundOf, toggleReaction, usernameHtmlOf, type Comment, type Post } from '../../lib/api';
+import { useStableHeight } from './useStableHeight';
+import { fetchPostById, addComment, deleteComment, fetchCommentCount, fetchComments, fetchFeed, fetchForYou, formatNum, recordView, recordWatch, setFollow, subscribeTables, soundOf, toggleReaction, nameHtmlOf, type Comment, type Post } from '../../lib/api';
 import { supabase, T } from '../../lib/supabase';
 import { BoostSheet, GiftSheet, ReportSheet } from '../social/Sheets';
 import { loadFollowing, useFollowingIds, useIsFollowing } from '../../lib/follows';
@@ -26,6 +27,7 @@ import { FullscreenPlayer } from './FullscreenPlayer';
 import { dedupe, hydrate, isInvalidated, needsRefresh, peek, persist, PERSIST_LIMIT, put, STALE_MS, touch } from '../../lib/swr';
 import { isAppActive, onAppActiveChange } from '../../lib/appActive';
 import { requireSignIn } from '../../lib/guest';
+import { FEED_KEY, type FeedCache } from '../../lib/feedWarm';
 
 function CommentVip({ id }: { id: string }) { return useIsVip(id) ? <VipBadge /> : null; }
 
@@ -35,7 +37,7 @@ function CommentRow({ c, reply, locked, mine, onReply, onDelete }: { c: Comment;
     <View style={[s.cRow, { flexDirection: 'row', gap: 10, marginLeft: reply ? 42 : 0 }]}>
       <VipAvatar userId={c.user_id} uri={c.author?.avatar_url} name={c.author?.username} size={size} />
       <View style={{ flex: 1 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}><Text style={s.cUser}>@<RichTextView html={usernameHtmlOf(c.author)} style={s.cUser} numberOfLines={1} /></Text><CommentVip id={c.user_id} /></View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}><RichTextView html={nameHtmlOf(c.author)} style={s.cUser} numberOfLines={1} /><CommentVip id={c.user_id} /></View>
         <RichTextView html={c.body_html || c.body.replace(/&/g, '&').replace(/</g, '<')} style={s.cText} />
         <View style={{ flexDirection: 'row', gap: 14, marginTop: 3 }}>
           <Text style={s.cUser}>{new Date(c.created_at).toLocaleDateString()}</Text>
@@ -74,7 +76,7 @@ function Comments({ post, onClose, onCount }: { post: Post; onClose: () => void;
   const startReply = (c: Comment) => {
     const root = c.parent_id ?? c.id;
     setReplyTo(c); setOpen((o) => ({ ...o, [root]: true }));
-    setHtml(`<span style="color: #3FA9FF; font-weight: bold;">@${c.author?.username ?? 'user'}</span> `); setKey((k) => k + 1);
+    setHtml(`<span style="color: #3FA9FF; font-weight: bold;">${(c.author?.display_name || c.author?.username || 'user').replace(/[<>&]/g, '')}</span> `); setKey((k) => k + 1);
   };
   const send = async () => {
     const plainText = richToPlain(html);
@@ -119,7 +121,7 @@ function Comments({ post, onClose, onCount }: { post: Post; onClose: () => void;
         ) : <>
         {replyTo && (
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingTop: 6 }}>
-            <Text style={s.cUser}>Replying to {handleOf(replyTo.author?.username ?? 'user')}</Text>
+            <Text style={s.cUser}>Replying to {replyTo.author?.display_name || replyTo.author?.username || 'user'}</Text>
             <Pressable onPress={() => { setReplyTo(null); setHtml(''); setKey((k) => k + 1); }}><Text style={[s.cUser, { fontWeight: '800' }]}>Cancel</Text></Pressable>
           </View>
         )}
@@ -217,9 +219,9 @@ export const Card = memo(function Card({ p: initial, height, onUser, onSound, me
       {partnerOpen && <PartnerJoinScreen inviterId={p.user_id} postId={p.id} onClose={() => setPartnerOpen(false)} />}
       {open && <Comments post={p} onClose={() => setOpen(false)} onCount={setComments} />}
       {opts && <ReportSheet post={p} onClose={() => setOpts(false)} />}
-      {giftOpen && <GiftSheet recipient={p.user_id} recipientName={`@${p.author?.username ?? 'user'}`} postId={p.id} onSent={(_l, q) => setGifts((x) => x + q)} onClose={() => setGiftOpen(false)} />}
+      {giftOpen && <GiftSheet recipient={p.user_id} recipientName={name} postId={p.id} onSent={(_l, q) => setGifts((x) => x + q)} onClose={() => setGiftOpen(false)} />}
       {boost && <BoostSheet post={p} onClose={() => setBoost(false)} />}
-      {shareOpen && <ShareSheet post={p} onClose={() => setShareOpen(false)} onShared={(n) => setShares((x) => x + n)} onBoost={() => setBoost(true)} onDuet={onDuet && p.kind === 'video' ? () => onDuet(p) : undefined} onReport={mine ? undefined : () => setOpts(true)} />}
+      {shareOpen && <ShareSheet post={p} onClose={() => setShareOpen(false)} onShared={(n) => setShares((x) => x + n)} isOwner={mine} onBoost={() => setBoost(true)} onDuet={onDuet && p.kind === 'video' ? () => onDuet(p) : undefined} onReport={mine ? undefined : () => setOpts(true)} />}
       {orig && <FullscreenPlayer posts={[orig]} index={0} onClose={() => setOrig(null)} onUser={(id) => { setOrig(null); onUser(id); }} />}
       {owner && <OwnerSheet post={p} onClose={() => setOwner(false)} onChange={setP} onDeleted={() => { setGone(true); onRemoved?.(p.id); }} />}
     </View>
@@ -238,8 +240,6 @@ function WatchTracker({ id, active }: { id: string; active: boolean }) {
 
 const VIEWABILITY = { itemVisiblePercentThreshold: 80, minimumViewTime: 120 };
 
-const FEED_KEY = 'feed:list';
-type FeedCache = { items: Post[]; more: boolean; activeId: string | null };
 
 export function FeedScreen({ onUser, onSound, onDuet, visible = true }: { onUser: (id: string) => void; onSound: (p: Post) => void; onDuet?: (p: Post) => void; visible?: boolean }) {
   // Last session's list, position and paging state: shown instantly when the user comes back to Home.
@@ -249,7 +249,7 @@ export function FeedScreen({ onUser, onSound, onDuet, visible = true }: { onUser
   const onViewable = useRef(({ viewableItems }: { viewableItems: { item: Post }[] }) => { if (viewableItems[0]) setActiveId(viewableItems[0].item.id); }).current;
   const [me, setMe] = useState<string>();
   useEffect(() => { void supabase.auth.getSession().then(({ data }) => setMe(data.session?.user.id)); }, []);
-  const [h, setH] = useState(0);
+  const { h, onLayout: onFeedLayout } = useStableHeight();
   const [items, setItems] = useState<Post[]>(cached?.items ?? []);
   const [loading, setLoading] = useState(!cached?.items.length);
   const [refreshing, setRefreshing] = useState(false);
@@ -273,11 +273,16 @@ export function FeedScreen({ onUser, onSound, onDuet, visible = true }: { onUser
   const cur = Math.max(0, shown.findIndex((x) => x.id === activeId));
   // Prefetch covers of the next 2 posts so a poster is shown instantly (no black screen).
   useEffect(() => {
-    shown.slice(cur + 1, cur + 3).forEach((x) => { if (x.thumbnail_url) void ExpoImage.prefetch(x.thumbnail_url, 'memory-disk').catch(() => undefined); });
+    shown.slice(cur, cur + 6).forEach((x) => {
+      if (x.thumbnail_url) void ExpoImage.prefetch(x.thumbnail_url, 'memory-disk').catch(() => undefined);
+      if (x.author?.avatar_url) void ExpoImage.prefetch(x.author.avatar_url, 'memory-disk').catch(() => undefined);
+    });
   }, [cur, shown]);
+  // Fetch the next page while the user still has several videos left, so fast scrolling never hits the end.
+  useEffect(() => { if (more && !refreshing && !loading && shown.length > 0 && cur >= shown.length - 4) void load(false); }, [cur, shown.length]); // eslint-disable-line react-hooks/exhaustive-deps
   // Warm up the first seconds of the next 2 videos (skipped offline, on slow networks and with Data Saver).
   // Low-RAM phones and mobile data warm up only the next video (fewer decoders, less data).
-  const ahead = isLowMemoryDevice || net.cellular ? 1 : 2;
+  const ahead = isLowMemoryDevice ? 1 : net.cellular ? 2 : 3;
   const preload = net.online && !net.slow && !saver && visible && tab !== 'Market'
     ? shown.slice(cur + 1, cur + 1 + ahead).filter((x) => x.kind === 'video' && x.media_urls[0]).map((x) => (x.edit?.lowUrl && net.slow ? x.edit.lowUrl : x.media_urls[0]))
     : [];
@@ -349,7 +354,7 @@ export function FeedScreen({ onUser, onSound, onDuet, visible = true }: { onUser
   const refresh = async () => { setRefreshing(true); await Promise.all([load(true), loadFollowing(true)]); setRefreshing(false); };
 
   return (
-    <View style={{ flex: 1 }} onLayout={(e) => setH(e.nativeEvent.layout.height)}>
+    <View style={{ flex: 1 }} onLayout={onFeedLayout}>
       {loading ? <View style={s.center}><ActivityIndicator size="large" color={colors.primary} /></View>
         : err && !items.length ? (
           <View style={s.center}><Text style={s.err}>{err}</Text><Pressable style={s.retry} onPress={() => { setLoading(true); void load(true).finally(() => setLoading(false)); }}><Text style={s.retryT}>Try again</Text></Pressable></View>
@@ -386,7 +391,7 @@ export function FeedScreen({ onUser, onSound, onDuet, visible = true }: { onUser
       {tab === 'Market' && <View style={[StyleSheet.absoluteFill, { backgroundColor: '#000', paddingTop: 56 }]}><MarketScreen embedded onBack={() => setTab('For You')} /></View>}
       <View style={s.header}>
         <View style={s.brand}>
-          <Image source={require('../../../assets/logo.png')} style={s.logo} resizeMode="contain" accessibilityLabel="Bee Took logo" />
+          <Image source={require('../../../assets/logo-b.png')} style={s.logo} resizeMode="contain" accessibilityLabel="Bee Took logo" />
           <Text numberOfLines={1} style={s.brandT}>Bee <Text style={{ color: '#FFA500' }}>Took</Text></Text>
         </View>
         <View style={s.tabs} pointerEvents="box-none">

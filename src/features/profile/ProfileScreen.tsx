@@ -4,7 +4,8 @@ import { notify } from '../../lib/notify';
 // Profile — mirrors app/frontend/src/pages/Profile.tsx, backed by Supabase profile/posts data.
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Image, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image } from '../../components/CachedImage';
 import { SocialIcon } from '../../components/SocialIcon';
 import { Icon, type IconName } from '../../components/Icons';
 import { PHOTO_MAX, fetchMyTab, fetchMyProfile, fetchReactedPosts, formatNum, setUsername as saveUsername, subscribeTables, updateProfile, uploadMedia, type Post, type Profile } from '../../lib/api';

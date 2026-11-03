@@ -11,7 +11,10 @@ import { colorSpecOf } from '../features/editor/motion';
 
 export const PAGE = 8;
 
-export interface Profile { id: string; public_id?: number | null; username: string | null; display_name: string | null; bio: string; avatar_url: string | null; links: Record<string, string>; followers_count?: number; following_count?: number; likes_count?: number; views_count?: number }
+/** Promotes my scheduled posts that are due (the server also does this every minute). Never throws. */
+export async function publishDuePosts(): Promise<void> { await supabase.rpc('app_9e1318caf6_publish_due_posts').then(() => undefined, () => undefined); }
+
+export interface Profile { id: string; is_private?: boolean; public_id?: number | null; username: string | null; display_name: string | null; bio: string; avatar_url: string | null; links: Record<string, string>; followers_count?: number; following_count?: number; likes_count?: number; views_count?: number }
 export interface Post {
   id: string; user_id: string; kind: 'photos' | 'video'; media_urls: string[]; caption: string;
   status: 'draft' | 'scheduled' | 'published'; publish_at: string; edit: MediaEdit | null;
@@ -22,7 +25,7 @@ export interface Post {
   allow_download?: boolean; allow_comments?: boolean; allow_duet?: boolean; age_restricted?: boolean; location?: string;
   liked?: boolean; saved?: boolean; pinned?: boolean; partner_enabled?: boolean;
 }
-export interface Comment { id: string; body: string; body_html?: string | null; parent_id?: string | null; reply_to_user?: string | null; created_at: string; user_id: string; author?: { username: string | null; avatar_url?: string | null } | null }
+export interface Comment { id: string; body: string; body_html?: string | null; parent_id?: string | null; reply_to_user?: string | null; created_at: string; user_id: string; author?: { username: string | null; display_name?: string | null; avatar_url?: string | null; links?: Record<string, string> | null } | null }
 export interface LiveRoom { id: string; host_id: string; title: string; category: string; cover_url: string | null; created_at: string; mode?: 'video' | 'audio'; layout?: 'fullscreen' | 'seats' | 'seats2' | 'seats3'; bg?: string | null; join_fee?: number; host?: { display_name: string | null; username: string | null } | null }
 
 export function formatNum(n: number): string {
@@ -835,7 +838,7 @@ export async function reportPost(postId: string, reason: string) {
   if (r.error) throw new Error(r.error.message);
 }
 export const soundOf = (p: Pick<Post, 'author'> & { sound_name?: string | null; edit?: MediaEdit | null }) =>
-  p.edit?.soundTitle || p.sound_name || `Original sound · @${p.author?.username ?? 'user'}`;
+  p.edit?.soundTitle || p.sound_name || `Original sound · ${p.author?.display_name || p.author?.username || 'user'}`;
 
 // ---------------- search (feed: people + videos) ----------------
 export type SearchResults = { profiles: Profile[]; posts: Post[] };
@@ -1024,6 +1027,7 @@ export async function fetchReactedPosts(kind: 'like' | 'save'): Promise<Post[]> 
   return rows.sort((a, b) => (at.get(a.id) ?? 0) - (at.get(b.id) ?? 0));
 }
 export async function fetchUserPosts(id: string): Promise<Post[]> {
-  return gridQuery((cols) => supabase.from(T.posts).select(cols).eq('user_id', id).eq('status', 'published').or('privacy.is.null,privacy.neq.only_me')
+  // Scheduled posts whose time has come count as published even before the server job flips their status.
+  return gridQuery((cols) => supabase.from(T.posts).select(cols).eq('user_id', id).in('status', ['published', 'scheduled']).lte('publish_at', new Date().toISOString()).or('privacy.is.null,privacy.neq.only_me')
     .order('pinned', { ascending: false, nullsFirst: false }).order('publish_at', { ascending: false }).limit(30));
 }

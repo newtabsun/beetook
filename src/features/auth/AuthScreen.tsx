@@ -8,6 +8,8 @@ import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, Text
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { supabase } from '../../lib/supabase';
 import { consumeSignUpIntent } from '../../lib/guest';
+import { LegalModal } from '../legal/LegalView';
+import type { LegalKind } from '../legal/legalContent';
 import { AuthEmailError, authMessage, forgotReset, forgotSend, loginResend, loginVerify, loginWithPassword } from '../../lib/authEmail';
 
 export function useSession() {
@@ -80,6 +82,8 @@ export function AuthScreen({ onBack, session, onGuest }: { onBack?: () => void; 
   const [info, setInfo] = useState('');
   const [challenge, setChallenge] = useState<{ id: string; email: string } | null>(null);
   const [cooldown, setCooldown] = useState(0);
+  const [agreed, setAgreed] = useState(false);
+  const [legal, setLegal] = useState<LegalKind | null>(null);
 
   useEffect(() => {
     if (cooldown <= 0) return undefined;
@@ -123,8 +127,11 @@ export function AuthScreen({ onBack, session, onGuest }: { onBack?: () => void; 
     return (data as string | null) ?? null;
   };
 
+  const needsConsent = mode === 'register';
+
   const submit = async () => {
     if (!validate()) return;
+    if (needsConsent && !agreed) { setErrors({ form: 'Please tick the box to accept the Terms of Service and Privacy Policy.' }); return; }
     setBusy(true);
     try {
       if (mode === 'forgot') {
@@ -248,6 +255,15 @@ export function AuthScreen({ onBack, session, onGuest }: { onBack?: () => void; 
             <Field label="Confirm password" icon={<LockIcon />} placeholder="Repeat your password" secure={!showPass} value={form.confirm} onChange={set('confirm')} error={errors.confirm} />
           )}
         </>)}
+        {needsConsent && (
+          <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: agreed }} accessibilityLabel="Agree to Terms of Service and Privacy Policy"
+            onPress={() => { setAgreed((a) => !a); setErrors((e) => ({ ...e, form: undefined })); }} style={st.consent}>
+            <View style={[st.box, agreed && st.boxOn]}>{agreed ? <Text style={st.tick}>✓</Text> : null}</View>
+            <Text style={st.consentT}>
+              I agree to the <Text style={st.link} onPress={() => setLegal('terms')}>Terms of Service</Text> and the <Text style={st.link} onPress={() => setLegal('privacy')}>Privacy Policy</Text>.
+            </Text>
+          </Pressable>
+        )}
         {errors.form ? <Text style={st.err}>{errors.form}</Text> : null}
         {info ? <Text style={[st.err, { color: '#22C55E' }]}>{info}</Text> : null}
         <Pressable disabled={busy} onPress={() => void submit()} style={({ pressed }) => [st.primary, (busy || pressed) && { opacity: 0.8 }]}>
@@ -258,6 +274,7 @@ export function AuthScreen({ onBack, session, onGuest }: { onBack?: () => void; 
       </View>
 
       <Pressable onPress={() => void guest()}><Text style={[st.guest, { marginTop: 32 }]}>Continue as guest</Text></Pressable>
+      <LegalModal kind={legal} onClose={() => setLegal(null)} />
     </ScrollView>
   );
 }
@@ -285,5 +302,11 @@ const st = StyleSheet.create({
   primaryT: { color: '#000', fontSize: 14, fontWeight: '800' },
   outline: { marginTop: 16, height: 40, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 },
   outlineT: { color: '#fff', fontWeight: '600' },
+  consent: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  box: { width: 20, height: 20, borderRadius: 6, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.4)', alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  boxOn: { backgroundColor: O, borderColor: O },
+  tick: { color: '#000', fontSize: 13, fontWeight: '900', lineHeight: 16 },
+  consentT: { flex: 1, color: 'rgba(255,255,255,0.65)', fontSize: 12, lineHeight: 18 },
+  link: { color: O, fontWeight: '700', textDecorationLine: 'underline' },
   guest: { color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: '600', textAlign: 'center' },
 });

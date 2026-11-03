@@ -59,6 +59,8 @@ export async function loadSettings(): Promise<Settings> {
 export async function saveSettings(s: Settings) {
   const { error } = await supabase.from(`${P}user_settings`).upsert({ user_id: await me(), settings: s, updated_at: new Date().toISOString() });
   if (error) throw new Error(error.message);
+  // The private-account switch is enforced by the database (follow guard + post visibility), not only stored.
+  await rpc<boolean>('set_private_account', { p_on: s.privateAccount });
 }
 
 export type SupportMsg = { id: number; from_support: boolean; body: string; created_at: string };

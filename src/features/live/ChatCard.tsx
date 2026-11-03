@@ -17,7 +17,7 @@ export const ChatCard = memo(function ChatCard({ userId, p, html, mine }: {
   return (
     <View style={s.row}>
       <VipAvatar userId={id} uri={p?.avatar_url} name={displayName(p)} size={24} />
-      <View style={[s.name, mine && s.nameMine]}><Text style={[s.nameT, mine && { color: '#000' }]}>{mine ? 'you' : p?.username ?? 'user'}</Text></View>
+      <View style={[s.name, mine && s.nameMine]}><Text style={[s.nameT, mine && { color: '#000' }]}>{mine ? 'you' : p?.display_name || p?.username || 'user'}</Text></View>
       <VipTag id={id} />
       <View style={{ flex: 1 }}><RichTextView html={html} style={s.text} /></View>
     </View>

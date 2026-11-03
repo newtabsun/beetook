@@ -19,7 +19,7 @@ export function Splash({ onDone }: { onDone: () => void }) {
   return (
     <View style={s.root} testID="splash">
       <Animated.View style={[s.inner, { opacity: fade, transform: [{ scale: fade.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }] }]}>
-        <Image source={require('../../assets/logo.png')} style={s.logo} resizeMode="contain" />
+        <Image source={require('../../assets/logo-b.png')} style={s.logo} resizeMode="contain" />
         <Text style={s.brand}><Text style={{ color: '#FFFFFF' }}>Bee</Text> Took</Text>
         <View style={s.track} onLayout={(e) => setW(e.nativeEvent.layout.width)}>
           <Animated.View style={[s.fill, { width: pct }]} testID="splash-progress" />

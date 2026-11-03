@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 export interface Note {
   id: number;
   text: string;
+  /** Rich HTML (per-word colors). Older notes only have text + one color. */
+  html?: string;
   color: string;
   bold: boolean;
   underline: boolean;

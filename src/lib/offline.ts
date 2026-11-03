@@ -13,7 +13,12 @@ const MAX = 200;
 let played: string[] = [];
 void AsyncStorage.getItem(KEY).then((v) => { if (v) played = JSON.parse(v) as string[]; }).catch(() => undefined);
 
-export const isCacheable = (uri: string) => /^https?:/.test(uri) && !/\.m3u8/.test(uri);
+/** Android caches HLS too (Stream videos are HLS), so they count in the meter and play offline once watched. */
+export const isCacheable = (uri: string) => /^https?:/.test(uri) && (Platform.OS === 'android' || !/\.m3u8/.test(uri));
+
+/** One source shape for feed, preload and warm-up players so they all share the same disk cache entry. */
+export const playerSource = (uri: string): string | { uri: string; useCaching: boolean } =>
+  !/^https?:/.test(uri) || (Platform.OS !== 'android' && /\.m3u8/.test(uri)) ? uri : { uri, useCaching: true };
 
 export function markPlayed(uri: string) {
   if (!isCacheable(uri) || played.includes(uri)) return;
@@ -66,13 +71,22 @@ export function initMediaCache() {
 
 
 /** Clears cached videos and images; previously watched videos then need a connection again. */
-export async function clearMediaCache(): Promise<void> {
+export async function clearMediaCache(): Promise<boolean> {
+  let ok = true;
   played = [];
   setDownloadedOnly(false);
   await AsyncStorage.removeItem(KEY).catch(() => undefined);
-  if (native) await clearVideoCacheAsync().catch(() => undefined);
+  if (native) {
+    // The player refuses to clear while a video player is alive: retry briefly until it is released.
+    ok = false;
+    for (let i = 0; i < 4 && !ok; i++) {
+      ok = await clearVideoCacheAsync().then(() => true, () => false);
+      if (!ok) await new Promise((r) => setTimeout(r, 400));
+    }
+  }
   await Promise.all([ExpoImage.clearDiskCache(), ExpoImage.clearMemoryCache()]).catch(() => undefined);
   if (!native && typeof caches !== 'undefined') {
     try { const keys = await caches.keys(); await Promise.all(keys.map((k) => caches.delete(k))); } catch { /* unsupported */ }
   }
+  return ok;
 }

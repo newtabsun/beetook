@@ -2,7 +2,8 @@
 // videos (by caption, sound name or sound title). Tapping a person opens the main profile.
 import { friendlyError } from '../../lib/errors';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image } from '../../components/CachedImage';
 import { AppModal } from '../../components/AppModal';
 import { Icon } from '../../components/Icons';
 import { VipAvatar } from '../../components/Vip';
@@ -76,7 +77,7 @@ export function SearchScreen({ onClose, onUser, onPlay }: {
                       ? <Image source={{ uri: p.thumbnail_url }} style={ss.thumb} resizeMode="cover" />
                       : <View style={[ss.thumb, ss.thumbEmpty]}><Icon name="video" size={22} color="rgba(255,255,255,0.4)" /></View>}
                     <Text numberOfLines={1} style={ss.cellT}>{richToPlain(p.caption) || p.sound_name || 'Video'}</Text>
-                    <Text numberOfLines={1} style={ss.cellS}>{formatNum(p.like_count)} likes{p.author?.username ? ` · @${p.author.username}` : ''}</Text>
+                    <Text numberOfLines={1} style={ss.cellS}>{formatNum(p.like_count)} likes{p.author?.display_name || p.author?.username ? ` · ${p.author.display_name || p.author.username}` : ''}</Text>
                   </Pressable>
                 ))}
               </View>

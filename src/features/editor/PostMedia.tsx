@@ -7,7 +7,7 @@ import { Icon } from '../../components/Icons';
 import { useAudible } from '../../lib/media';
 import { lowQuality, markDataSaverNoticeSeen, useDataSaverNoticeSeen, useEffectiveDataSaver, whenGood } from '../../lib/network';
 import { Image as ExpoImage } from 'expo-image';
-import { isCacheable, markPlayed } from '../../lib/offline';
+import { isCacheable, markPlayed, playerSource } from '../../lib/offline';
 import { applyGain, useSlideshowAudio } from '../../lib/slideAudio';
 import { colors } from '../../theme';
 import { DuetLayer, type DuetEdit } from '../duet/DuetLayer';
@@ -230,7 +230,7 @@ function VideoImpl(p: VideoProps) {
 }
 
 /** No progress for this long → show the loading spinner. */
-const SPIN_MS = 700;
+const SPIN_MS = 1200;
 /** No progress for this long → network stall: switch to low quality, then reload automatically when connected. */
 const STALL_MS = 3000;
 
@@ -325,7 +325,7 @@ function NativeVideo({ uri, edit, width, height, onProgress, editable, sound, ac
   const activeRef = useRef(active);
   activeRef.current = active;
   // Progressive MP4s are cached on disk so a video seen once is not downloaded again (HLS is streamed).
-  const player = useVideoPlayer(/\.m3u8/.test(uri) ? uri : { uri, useCaching: true }, (p) => {
+  const player = useVideoPlayer(playerSource(uri), (p) => {
     p.loop = true; p.muted = !active; p.volume = 1;
     try { p.bufferOptions = { preferredForwardBufferDuration: 8, minBufferForPlayback: 1, waitsToMinimizeStalling: true }; } catch { /* unsupported */ }
     if (active) p.play();
@@ -389,9 +389,9 @@ function WebPreload({ uri }: { uri: string }) {
   return null;
 }
 function NativePreload({ uri }: { uri: string }) {
-  const player = useVideoPlayer(/\.m3u8/.test(uri) ? uri : { uri, useCaching: true }, (p) => {
+  const player = useVideoPlayer(playerSource(uri), (p) => {
     p.muted = true;
-    try { p.bufferOptions = { preferredForwardBufferDuration: 4, minBufferForPlayback: 1, waitsToMinimizeStalling: true }; } catch { /* unsupported */ }
+    try { p.bufferOptions = { preferredForwardBufferDuration: 8, minBufferForPlayback: 1, waitsToMinimizeStalling: true }; } catch { /* unsupported */ }
   });
   useEffect(() => () => { try { player.pause(); } catch { /* released */ } }, [player]);
   return null;

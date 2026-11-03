@@ -54,6 +54,7 @@ export function VideoGrid({ posts, onOpen, showPinned, limit, boosts }: {
         <Pressable key={x.id} style={[g.cell, { width: cw, height: Math.round((cw * 16) / 9) }]} accessibilityLabel="Open video" testID={`grid-${i}`} onPress={() => onOpen(i)}>
           <Poster p={x} />
           {x.privacy === 'only_me' && <View style={[g.pin, { left: undefined, right: 4, backgroundColor: '#333' }]}><Text style={[g.pinT, { color: '#fff' }]}>Private</Text></View>}
+          {x.status === 'scheduled' && new Date(x.publish_at).getTime() > Date.now() && <View style={[g.pin, { left: undefined, right: 4, backgroundColor: '#3FA9FF' }]}><Text style={[g.pinT, { color: '#000' }]}>Scheduled</Text></View>}
           {x.status === 'draft' && <View style={[g.pin, { left: undefined, right: 4, backgroundColor: '#555' }]}><Text style={[g.pinT, { color: '#fff' }]}>Draft</Text></View>}
           {showPinned && x.pinned && <View style={g.pin}><Text style={g.pinT}>Pinned</Text></View>}
           <View style={g.views}><Icon name="play" size={12} color="#fff" fill="#fff" /><Text style={g.viewsT}>{formatNum(Number(x.view_count ?? 0) || 0)}</Text></View>

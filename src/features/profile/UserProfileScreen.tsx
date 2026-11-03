@@ -87,14 +87,20 @@ export function UserProfileScreen({ userId, onBack, onMessage, onUser }: { userI
           <ProfileBio st={readStyle(p)} />
           {!p.isMe && (
             <View style={{ flexDirection: 'row', gap: 10 }}>
-              <Pressable style={[followedShared ? s.outline : s.btn, { flex: 1 }]} onPress={() => void toggle()}>
-                <Text style={followedShared ? s.text : s.btnT}>{followedShared ? 'Following' : 'Follow'}</Text>
-              </Pressable>
+              {p.is_private && !followedShared ? (
+                <View testID="private-account" style={[s.outline, { flex: 1, opacity: 0.6, flexDirection: 'row', justifyContent: 'center', gap: 6 }]}>
+                  <Icon name="lock" size={14} color={colors.foreground} /><Text style={s.text}>Private</Text>
+                </View>
+              ) : (
+                <Pressable style={[followedShared ? s.outline : s.btn, { flex: 1 }]} onPress={() => void toggle()}>
+                  <Text style={followedShared ? s.text : s.btnT}>{followedShared ? 'Following' : 'Follow'}</Text>
+                </Pressable>
+              )}
               <Pressable style={[s.outline, { flex: 1 }]} onPress={() => (p && onMessage ? onMessage({ id: p.id, username: p.username, display_name: p.display_name }) : setMsgOpen((v) => !v))}><Text style={s.text}>Message</Text></Pressable>
               <Pressable style={[s.outline, { flex: 1 }]} onPress={() => setGift(true)}><View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}><Icon name="giftRound" size={16} color="#FF2D55" fill="rgba(255,45,85,0.18)" /><Text style={s.text}>Gift</Text></View></Pressable>
             </View>
           )}
-          {gift && <GiftSheet recipient={p.id} recipientName={`@${p.username ?? 'user'}`} onClose={() => setGift(false)} />}
+          {gift && <GiftSheet recipient={p.id} recipientName={p.display_name || p.username || 'user'} onClose={() => setGift(false)} />}
           {msgOpen && (
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <TextInput style={s.input} value={msg} onChangeText={setMsg} placeholder="Message…" placeholderTextColor="#777" />
@@ -105,7 +111,7 @@ export function UserProfileScreen({ userId, onBack, onMessage, onUser }: { userI
       )}
       <View>
         <VideoGrid posts={posts} onOpen={setPlayAt} showPinned limit={paging.limit} />
-        {p && !posts.length && <Text style={s.muted}>No posts</Text>}
+        {p && !posts.length && <Text style={s.muted}>{p.is_private && !followedShared && !p.isMe ? 'This account is private' : 'No posts'}</Text>}
       </View>
       {playAt !== null && <FullscreenPlayer posts={posts} index={playAt} onClose={() => setPlayAt(null)} onUser={onUser} onRemoved={(id) => setPosts((a) => a.filter((x) => x.id !== id))} />}
     </ScrollView>

@@ -2,7 +2,8 @@ import { requireSignIn, useIsGuest } from '../../lib/guest';
 import { friendlyError } from '../../lib/errors';
 // Marketplace mirroring the web reference; listings, market balance and escrow orders are all backed by Supabase RPCs.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Image, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { Image } from '../../components/CachedImage';
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useActiveInterval } from '../../lib/appActive';
 

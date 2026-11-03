@@ -4,7 +4,8 @@ import { friendlyError } from '../../lib/errors';
 // realtime chat with photo + voice media, owner earnings and settings. Fees are charged server-side.
 import { VipAvatar, VipTag } from '../../components/Vip';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image } from '../../components/CachedImage';
 import * as ImagePicker from 'expo-image-picker';
 import { AudioModule, RecordingPresets, useAudioPlayer, useAudioRecorder } from 'expo-audio';
 import {

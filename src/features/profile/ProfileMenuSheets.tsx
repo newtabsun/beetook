@@ -2,7 +2,8 @@ import { friendlyError } from '../../lib/errors';
 import { refreshVip } from '../../components/Vip';
 // Profile ☰ menu pages (full screen) — mirror web Profile menu: Analytics, VIP, Settings, Help, About, Share, Rank, Follow us.
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Image, Linking, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image } from '../../components/CachedImage';
 import * as Clipboard from 'expo-clipboard';
 import QRCode from 'qrcode';
 import { SvgXml } from 'react-native-svg';
@@ -20,12 +21,12 @@ import {
   vipActive, vipDays, vipSetAuto, vipStatus, vipSubscribe, type Blocked, type RankRow, type Settings, type Social, type SupportMsg, type Vip,
 } from '../../lib/menu';
 import { BottomSheet, Btn, Chip, Field, Group, O, Page, Row, Toggle, u } from './menuUi';
+import { LegalView } from '../legal/LegalView';
+import { LEGAL } from '../legal/legalContent';
 
 export const APP_VERSION = '1.4.0';
 const BUILD = '214';
 const SUPPORT = 'support@beetook.com';
-const TERMS = 'https://beetook.com/terms';
-const PRIVACY = 'https://beetook.com/privacy';
 const VIP_PRICE = 12500;
 const FAQS = [
   ['How do I buy coins?', 'Open Wallet → Buy coins. In the Android app you pay with Google Play; on the web you can also use Chapa (telebirr, CBE Birr, M-Pesa, cards) or USDT on BEP20. Coins go to your Purchased balance.'],
@@ -35,7 +36,7 @@ const FAQS = [
   ['How do I delete my account?', 'Settings → Danger zone → Remove account. Type DELETE to confirm.'],
 ];
 
-export type MenuSheet = 'analytics' | 'partners' | 'vip' | 'settings' | 'help' | 'about' | 'share' | 'rank' | 'follow';
+export type MenuSheet = 'analytics' | 'partners' | 'vip' | 'settings' | 'help' | 'about' | 'share' | 'rank' | 'follow' | 'terms' | 'privacy';
 const open = (url: string) => void Linking.openURL(url).catch(() => notify('Could not open link'));
 const err = (e: unknown) => notify('Error', friendlyError(e));
 
@@ -183,13 +184,14 @@ function CacheRow() {
   const [used, setUsed] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const measure = () => mediaCacheBytes().then(setUsed).catch(() => setUsed(0));
-  useEffect(() => { void measure(); }, []);
+  // Live meter: re-measured every 3 s while Settings is open, so freshly watched videos show up at once.
+  useEffect(() => { void measure(); const t = setInterval(() => void measure(), 3000); return () => clearInterval(t); }, []);
   const clear = async () => {
     setBusy(true);
-    await clearMediaCache();
+    const ok = await clearMediaCache();
     await measure();
     setBusy(false);
-    notify('Cache cleared');
+    notify(ok ? 'Cache cleared' : 'Some videos are still in use. Close the video and try again');
   };
   return (
     <View style={[u.card, { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }]}>
@@ -205,7 +207,7 @@ function CacheRow() {
   );
 }
 
-function SettingsPage({ onBack, onHelp }: { onBack: () => void; onHelp: () => void }) {
+function SettingsPage({ onBack, onHelp, onNavigate }: { onBack: () => void; onHelp: () => void; onNavigate: (k: MenuSheet) => void }) {
   const me = useMe();
   const saverNow = useEffectiveDataSaver();
   const [st, setSt] = useState<Settings | null>(null);
@@ -388,8 +390,8 @@ function SettingsPage({ onBack, onHelp }: { onBack: () => void; onHelp: () => vo
         </Group>
         <Group icon="shield" title="Support & about">
           <Row icon="shield" label="Help & support" onPress={onHelp} />
-          <Row icon="lock" label="Privacy policy" onPress={() => open(PRIVACY)} />
-          <Row icon="check" label="Terms of service" onPress={() => open(TERMS)} />
+          <Row icon="lock" label="Privacy policy" onPress={() => onNavigate('privacy')} />
+          <Row icon="check" label="Terms of service" onPress={() => onNavigate('terms')} />
           <Row last icon="sparkles" label="App version" value={`${APP_VERSION} (${BUILD})`} />
         </Group>
         <View style={{ marginTop: 16 }}>
@@ -448,7 +450,11 @@ function HelpPage({ onBack }: { onBack: () => void }) {
   );
 }
 
-function AboutPage({ onBack }: { onBack: () => void }) {
+function LegalPage({ kind, onBack }: { kind: 'terms' | 'privacy'; onBack: () => void }) {
+  return <Page title={LEGAL[kind].title} onBack={onBack}><LegalView kind={kind} /></Page>;
+}
+
+function AboutPage({ onBack, onNavigate }: { onBack: () => void; onNavigate: (k: MenuSheet) => void }) {
   return (
     <Page title="About Bee Took" onBack={onBack}>
       <View style={{ alignItems: 'center' }}>
@@ -458,8 +464,8 @@ function AboutPage({ onBack }: { onBack: () => void }) {
         <Text style={[u.hint, { marginTop: 8, fontWeight: '700' }]}>Version {APP_VERSION} (build {BUILD})</Text>
       </View>
       <View style={[u.gbox, { marginTop: 16 }]}>
-        <Row icon="shield" label="Terms of service" onPress={() => open(TERMS)} />
-        <Row icon="shield" label="Privacy policy" onPress={() => open(PRIVACY)} />
+        <Row icon="check" label="Terms of service" hint="Rules for using Bee Took" onPress={() => onNavigate('terms')} />
+        <Row icon="lock" label="Privacy policy" hint="How we handle your information" onPress={() => onNavigate('privacy')} />
         <Row last icon="layers" label="Copy version for support" onPress={() => void Clipboard.setStringAsync(APP_VERSION).then(() => notify('Version copied'))} />
       </View>
     </Page>
@@ -560,9 +566,11 @@ export function ProfileMenuPage({ kind, onBack, onNavigate }: { kind: MenuSheet;
     case 'analytics': return <Analytics onBack={onBack} />;
     case 'partners': return null; // rendered by App (needs profile navigation)
     case 'vip': return <VipPage onBack={onBack} />;
-    case 'settings': return <SettingsPage onBack={onBack} onHelp={() => onNavigate('help')} />;
+    case 'settings': return <SettingsPage onBack={onBack} onHelp={() => onNavigate('help')} onNavigate={onNavigate} />;
     case 'help': return <HelpPage onBack={onBack} />;
-    case 'about': return <AboutPage onBack={onBack} />;
+    case 'about': return <AboutPage onBack={onBack} onNavigate={onNavigate} />;
+    case 'terms': return <LegalPage kind="terms" onBack={() => onNavigate('about')} />;
+    case 'privacy': return <LegalPage kind="privacy" onBack={() => onNavigate('about')} />;
     case 'share': return <SharePage onBack={onBack} />;
     case 'rank': return <RankPage onBack={onBack} />;
     case 'follow': return <FollowPage onBack={onBack} />;

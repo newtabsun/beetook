@@ -23,23 +23,27 @@ const SOCIAL: { name: string; bg: string; icon: IconName; href: (u: string) => s
 ];
 const COLORS = ['#FFA500', '#FF6B6B', '#4ECDC4', '#A78BFA', '#F59E0B', '#60A5FA', '#F472B6', '#34D399'];
 
-export function ShareSheet({ post, onClose, onShared, onBoost, onDuet, onReport }: {
-  post: Post; onClose: () => void; onShared: (n: number) => void; onBoost?: () => void; onDuet?: () => void; onReport?: () => void;
+export function ShareSheet({ post, onClose, onShared, onBoost, onDuet, onReport, isOwner }: {
+  post: Post; onClose: () => void; onShared: (n: number) => void; onBoost?: () => void; onDuet?: () => void; onReport?: () => void; isOwner?: boolean;
 }) {
   const url = shareUrlOf(post);
+  // "Allow Duet/Share" off: everybody except the owner is blocked from duet AND from sharing the link.
+  const shareOff = post.allow_duet === false && !isOwner;
+  const blocked = () => { notify('The creator turned off Duet/Share for this video'); return true; };
   const [friends, setFriends] = useState<MiniProfile[] | null>(null);
   const [picked, setPicked] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
   useEffect(() => { fetchFriends().then(setFriends).catch(() => setFriends([])); }, []);
   const count = async (n = 1) => { onShared(n); await recordShare(post.id).catch(() => undefined); };
 
-  const copy = async () => { await Clipboard.setStringAsync(url); await count(); notify('Link copied to clipboard'); };
+  const copy = async () => { if (shareOff && blocked()) return; await Clipboard.setStringAsync(url); await count(); notify('Link copied to clipboard'); };
   const download = () => { onClose(); void downloadPost(post); };
   const duet = () => {
-    if (post.allow_duet === false) return notify('The creator turned off Duet for this video');
+    if (shareOff) { blocked(); return; }
     onClose(); onDuet?.();
   };
   const send = async () => {
+    if (shareOff && blocked()) return;
     setSending(true);
     try {
       await Promise.all(picked.map((id) => sendMessage(id, `🎬 ${post.caption ? `${post.caption.slice(0, 80)}\n` : ''}${url}`)));
@@ -82,7 +86,7 @@ export function ShareSheet({ post, onClose, onShared, onBoost, onDuet, onReport 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
             {friends.map((f, i) => {
               const on = picked.includes(f.id);
-              const h = f.username || f.display_name || 'user';
+              const h = f.display_name || f.username || 'user';
               return (
                 <Pressable key={f.id} accessibilityLabel={`Pick @${h}`} accessibilityState={{ selected: on }} style={s.friend}
                   onPress={() => setPicked((p) => (on ? p.filter((x) => x !== f.id) : [...p, f.id]))}>
@@ -90,7 +94,7 @@ export function ShareSheet({ post, onClose, onShared, onBoost, onDuet, onReport 
                     <Text style={s.fAvT}>{h[0]?.toUpperCase()}</Text>
                     {on && <View style={s.tick}><Icon name="check" size={10} color="#000" strokeWidth={3} /></View>}
                   </View>
-                  <Text style={s.fT} numberOfLines={1}>{handleOf(h)}</Text>
+                  <Text style={s.fT} numberOfLines={1}>{h}</Text>
                 </Pressable>
               );
             })}
@@ -100,7 +104,7 @@ export function ShareSheet({ post, onClose, onShared, onBoost, onDuet, onReport 
         <View style={s.grid}>
           {SOCIAL.map((x) => (
             <Pressable key={x.name} accessibilityLabel={`Share to ${x.name}`} style={s.soc}
-              onPress={() => { void count(); Linking.openURL(x.href(url)).catch(() => notify(`Could not open ${x.name}`)); }}>
+              onPress={() => { if (shareOff && blocked()) return; void count(); Linking.openURL(x.href(url)).catch(() => notify(`Could not open ${x.name}`)); }}>
               <View style={[s.sCircle, { backgroundColor: x.bg }]}><Icon name={x.icon} size={18} color="#fff" /></View>
               <Text style={s.socT}>{x.name}</Text>
             </Pressable>

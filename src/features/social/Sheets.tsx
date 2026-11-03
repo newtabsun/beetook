@@ -103,7 +103,7 @@ export function BoostSheet({ post, onClose }: { post: Post; onClose: () => void 
     setBusy(true);
     try {
       const r = await boostVideo(post.id, kind, qty); setCoins(r.coins);
-      const target = r.for_other ? `@${post.author?.username ?? 'this user'}'s video` : 'your video';
+      const target = r.for_other ? `${post.author?.display_name || post.author?.username || 'this user'}'s video` : 'your video';
       notify(kind === 'liveViewers'
         ? `Boost started — ${formatNum(qty)} live viewers will be counted whenever people join ${r.for_other ? 'their live' : 'your live'}`
         : `Boost started — ${target} is shown first to everyone until it reaches ${formatNum(qty)} ${type.unit}`);

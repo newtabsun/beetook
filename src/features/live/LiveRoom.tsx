@@ -135,7 +135,7 @@ const ChatRow = memo(function ChatRow({ m, p, mine }: { m: LiveEvent; p?: MiniPr
   return (
     <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginVertical: 4 }}>
       <Avatar p={p} size={24} />
-      <View style={[s.chatName, mine && { backgroundColor: OR }]}><Text style={[s.chatNameT, mine && { color: '#000' }]}>{mine ? 'you' : p?.username ?? 'user'}</Text></View><VipTag id={m.user_id} />
+      <View style={[s.chatName, mine && { backgroundColor: OR }]}><Text style={[s.chatNameT, mine && { color: '#000' }]}>{mine ? 'you' : p?.display_name || p?.username || 'user'}</Text></View><VipTag id={m.user_id} />
       <View style={{ flex: 1 }}><RichTextView html={m.payload} style={s.chatT} /></View>
     </View>
   );
