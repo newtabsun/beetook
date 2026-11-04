@@ -396,10 +396,19 @@ export async function fetchMyTab(tab: 'videos' | 'private'): Promise<Post[]> {
   const priv = (r: Post) => r.status === 'draft' || r.privacy === 'only_me';
   return tab === 'private' ? rows.filter(priv) : rows.filter((r) => !priv(r)).sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned));
 }
+const deletedIds = new Set<string>();
+const deletedSubs = new Set<(id: string) => void>();
+/** Every screen hides a post the moment it is deleted (own, admin, or from another screen). */
+export const isPostDeleted = (id: string) => deletedIds.has(id);
+export function onPostDeleted(f: (id: string) => void) { deletedSubs.add(f); return () => { deletedSubs.delete(f); }; }
+export function markPostDeleted(id: string) {
+  deletedIds.add(id); deletedSubs.forEach((f) => f(id));
+  invalidate('me:'); invalidate('feed:');
+}
 export async function deletePost(id: string) {
   const rows = must(await supabase.from(T.posts).delete().eq('id', id).select('id')) as { id: string }[];
   if (!rows.length) throw new Error('Only the owner can delete this video');
-  invalidate('me:');
+  markPostDeleted(id);
 }
 export const MAX_PINS = 3;
 export type PostPatch = Partial<Pick<Post, 'caption' | 'caption_html' | 'privacy' | 'allow_comments' | 'allow_download' | 'allow_duet' | 'pinned' | 'partner_enabled'>>;

@@ -1,6 +1,6 @@
 // Shared full-screen page chrome for Profile ☰ menu pages (mirrors web account views).
-import type { ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View, type TextInputProps } from 'react-native';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, type TextInputProps } from 'react-native';
 import { Icon, type IconName } from '../../components/Icons';
 import { AppInput } from '../../components/Input';
 
@@ -67,11 +67,32 @@ export function Row({ icon, label, hint, value, toggle, onPress, danger, last }:
   );
 }
 
-export function Btn({ label, onPress, busy, danger, icon }: { label: string; onPress: () => void; busy?: boolean; danger?: boolean; icon?: IconName }) {
+let failN = 0;
+/** Call when an action failed so the pressed button can show the failure state. */
+export const reportFail = () => { failN += 1; };
+
+export function Btn({ label, onPress, busy, danger, icon }: { label: string; onPress: () => unknown; busy?: boolean; danger?: boolean; icon?: IconName }) {
+  const [run, setRun] = useState(false);
+  const [res, setRes] = useState<'ok' | 'fail' | null>(null);
+  const alive = useRef(true);
+  useEffect(() => () => { alive.current = false; }, []);
+  const press = async () => {
+    if (run || busy) return;
+    const before = failN; setRes(null); setRun(true);
+    let ok = true;
+    try { await onPress(); } catch { ok = false; }
+    if (failN !== before) ok = false;
+    if (!alive.current) return;
+    setRun(false); setRes(ok ? 'ok' : 'fail');
+    setTimeout(() => { if (alive.current) setRes(null); }, 1800);
+  };
+  const spin = run || !!busy;
+  const fg = danger ? '#fff' : '#000';
   return (
-    <Pressable accessibilityLabel={label} disabled={busy} onPress={onPress} style={[u.btn, danger && { backgroundColor: '#FF3B30' }, busy && { opacity: 0.6 }]}>
-      {!!icon && <Icon name={icon} size={16} color={danger ? '#fff' : '#000'} />}
-      <Text style={[u.btnT, danger && { color: '#fff' }]}>{label}</Text>
+    <Pressable accessibilityLabel={label} disabled={spin} onPress={() => void press()}
+      style={[u.btn, danger && { backgroundColor: '#FF3B30' }, res === 'ok' && { backgroundColor: '#34C759' }, res === 'fail' && { backgroundColor: '#8E1B14' }, spin && { opacity: 0.6 }]}>
+      {spin ? <ActivityIndicator color={fg} size="small" /> : !!icon && <Icon name={icon} size={16} color={fg} />}
+      <Text style={[u.btnT, danger && { color: '#fff' }, res === 'fail' && { color: '#fff' }]}>{res === 'ok' ? '✓ Done' : res === 'fail' ? '✕ Failed' : label}</Text>
     </Pressable>
   );
 }

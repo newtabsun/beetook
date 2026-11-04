@@ -1,4 +1,5 @@
 // Generated: bundled live backgrounds (max 720px WebP) + 96px picker thumbs.
+import { supabase } from '../../lib/supabase';
 export const LIVE_BGS: { key: string; full: number; thumb: number }[] = [
   { key: 'bg1', full: require('../../../assets/live-bg/bg1.webp'), thumb: require('../../../assets/live-bg/t1.webp') },
   { key: 'bg2', full: require('../../../assets/live-bg/bg2.webp'), thumb: require('../../../assets/live-bg/t2.webp') },
@@ -23,5 +24,19 @@ export const LIVE_BGS: { key: string; full: number; thumb: number }[] = [
   { key: 'bg21', full: require('../../../assets/live-bg/bg21.webp'), thumb: require('../../../assets/live-bg/t21.webp') },
   { key: 'bg22', full: require('../../../assets/live-bg/bg22.webp'), thumb: require('../../../assets/live-bg/t22.webp') },
 ];
-const MAP = new Map(LIVE_BGS.map((b) => [b.key, b.full]));
+const MAP = new Map<string, number | { uri: string }>(LIVE_BGS.map((b) => [b.key, b.full]));
+export type BgItem = { key: string; thumb: number | { uri: string } };
+let remote: BgItem[] = [];
+const listeners = new Set<() => void>();
+/** Admin-added backgrounds (server table); bundled ones stay as defaults. */
+export async function loadRemoteBgs(): Promise<void> {
+  try {
+    const { data } = await supabase.from('app_9e1318caf6_live_bgs').select('key,image_url,removed').order('created_at');
+    remote = [];
+    for (const r of (data ?? []) as { key: string; image_url: string }[]) { MAP.set(r.key, { uri: r.image_url }); remote.push({ key: r.key, thumb: { uri: r.image_url } }); }
+    listeners.forEach((f) => f());
+  } catch { /* keep bundled set */ }
+}
+export const remoteBgs = () => remote;
+export const onRemoteBgs = (f: () => void) => { listeners.add(f); return () => { listeners.delete(f); }; };
 export const bgSource = (key?: string | null) => (key ? MAP.get(key) : undefined);

@@ -132,9 +132,22 @@ function SpeakRing({ size }: { size: number }) {
   );
 }
 
+/** Admin warning ring: true when the user has an active warning (public, cached per session). */
+const warnCache = new Map<string, boolean>();
+function useWarned(id?: string | null): boolean {
+  const [w, setW] = useState<boolean>(id ? warnCache.get(id) ?? false : false);
+  useEffect(() => {
+    if (!id) return;
+    if (warnCache.has(id)) { setW(warnCache.get(id)!); return; }
+    void supabase.from('app_9e1318caf6_warnings').select('user_id').eq('user_id', id).limit(1).then(({ data }) => { const v = !!data?.length; warnCache.set(id, v); setW(v); });
+  }, [id]);
+  return w;
+}
+
 /** Avatar with web-identical VIP ring (padding = max(2, size/20)) + live ring/LIVE label or online dot. */
 export function VipAvatar({ userId, uri, name, size, color = '#FFA500', vip, status = true, liveBadge = true, speaking = false }: { userId?: string | null; uri?: string | null; name?: string | null; size: number; color?: string; vip?: boolean; status?: boolean; liveBadge?: boolean; speaking?: boolean }) {
   const fetched = useIsVip(vip === undefined ? userId : null);
+  const warned = useWarned(userId);
   const st = useUserStatus(status ? userId : null);
   const online = st.online;
   const room = liveBadge ? st.room : null;
@@ -157,6 +170,7 @@ export function VipAvatar({ userId, uri, name, size, color = '#FFA500', vip, sta
           {uri ? <ExpoImage source={{ uri }} style={{ width: inner, height: inner }} contentFit="cover" cachePolicy="memory-disk" transition={0} recyclingKey={uri} /> : <Text style={{ color: '#000', fontWeight: '800', fontSize: Math.max(10, inner * 0.4) }}>{letter}</Text>}
         </View>
       </View>
+      {warned && <View testID="warn-ring" pointerEvents="none" style={{ position: 'absolute', left: -3, top: -3, width: size + 6, height: size + 6, borderRadius: size, borderWidth: Math.max(3, Math.round(size / 18)), borderColor: '#FF1744' }} />}
       {!room && online ? (
         <View testID="online-dot" pointerEvents="none" style={{ position: 'absolute', left: cx - dot / 2, top: cy - dot / 2, width: dot, height: dot, borderRadius: dot / 2, backgroundColor: '#22C55E', borderWidth: Math.max(1.5, dot / 6), borderColor: '#0A0A0B' }} />
       ) : null}

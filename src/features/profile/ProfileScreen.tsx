@@ -8,7 +8,7 @@ import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, Te
 import { Image } from '../../components/CachedImage';
 import { SocialIcon } from '../../components/SocialIcon';
 import { Icon, type IconName } from '../../components/Icons';
-import { PHOTO_MAX, fetchMyTab, fetchMyProfile, fetchReactedPosts, formatNum, setUsername as saveUsername, subscribeTables, updateProfile, uploadMedia, type Post, type Profile } from '../../lib/api';
+import { onPostDeleted, PHOTO_MAX, fetchMyTab, fetchMyProfile, fetchReactedPosts, formatNum, setUsername as saveUsername, subscribeTables, updateProfile, uploadMedia, type Post, type Profile } from '../../lib/api';
 import { handleHtml, normalizeUsername, usernameError, usernameErrorFromServer } from '../../lib/username';
 import { colors } from '../../theme';
 import { getWallet } from '../../lib/api';
@@ -22,6 +22,7 @@ const TAB_KEY = 'me:tab:';
 const PROFILE_TTL = 5 * 60_000;
 const POSTS_TTL = 5 * 60_000;
 import { APP_VERSION, type MenuSheet } from './ProfileMenuSheets';
+import { NoticeCard } from './NoticeCard';
 import { MarqueeRich, RichTextInput, RichTextView, richToPlain } from '../../components/RichText';
 import { PublicId } from '../../components/PublicId';
 import { PartnerBadge } from '../partner/PartnerBadge';
@@ -92,6 +93,7 @@ export function ProfileScreen({ onOpenNotes, onOpen }: { onOpenNotes: () => void
   const [usernameErr, setUsernameErr] = useState('');
   const [tab, setTab] = useState<PTab>('videos');
   const [posts, setPosts] = useState<Post[] | null>(() => peek<Post[]>(`${TAB_KEY}videos`) ?? null);
+  useEffect(() => onPostDeleted((id) => setPosts((l) => (l ? l.filter((x) => x.id !== id) : l))), []);
   const [playAt, setPlayAt] = useState<number | null>(null);
   const [tabErr, setTabErr] = useState('');
   const [reload, setReload] = useState(0);
@@ -193,6 +195,7 @@ export function ProfileScreen({ onOpenNotes, onOpen }: { onOpenNotes: () => void
           <Pressable accessibilityLabel="Menu" style={s.hBtn} onPress={() => setMenu(true)}><Icon name="menu" size={16} color={O} /></Pressable>
         </View>
         {!p && !err && <ActivityIndicator color={O} />}
+        <NoticeCard />
         {!!err && <Text style={{ color: '#E53935', textAlign: 'center' }}>{err}</Text>}
         {p && st && (
           <>

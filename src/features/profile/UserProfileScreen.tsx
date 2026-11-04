@@ -3,7 +3,7 @@ import { VipAvatar, VipBadge, useIsVip } from '../../components/Vip';
 import { notify } from '../../lib/notify';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { fetchProfile, fetchUserPosts, formatNum, sendMessage, setFollow, subscribeTables, type Post, type Profile } from '../../lib/api';
+import { fetchProfile, fetchUserPosts, formatNum, onPostDeleted, sendMessage, setFollow, subscribeTables, type Post, type Profile } from '../../lib/api';
 import { T } from '../../lib/supabase';
 import { recordProfileView } from '../../lib/boost';
 import { colors, radius } from '../../theme';
@@ -35,6 +35,7 @@ export function UserProfileScreen({ userId, onBack, onMessage, onUser }: { userI
   const [playAt, setPlayAt] = useState<number | null>(null);
   const [p, setP] = useState<Full | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
+  useEffect(() => onPostDeleted((id) => setPosts((l) => l.filter((x) => x.id !== id))), []);
   const [err, setErr] = useState('');
   const [msg, setMsg] = useState('');
   const [msgOpen, setMsgOpen] = useState(false);

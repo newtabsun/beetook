@@ -6,6 +6,7 @@ import { AppModal } from '../../components/AppModal';
 import { notify } from '../../lib/notify';
 // Gift / Boost / Post-options sheets. Coin changes happen only in server RPCs.
 import { useEffect, useState, type ReactNode } from 'react';
+import { listPackages } from '../../lib/admin';
 import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View , Platform } from 'react-native';
 import { BOOST_TYPES, basePriceFor, boostVideo, customLimits, discountFor, priceFor, type BoostKind } from '../../lib/boost';
 import { formatNum, getWallet, reportPost, sendGift, type Post } from '../../lib/api';
@@ -93,11 +94,17 @@ export function BoostSheet({ post, onClose }: { post: Post; onClose: () => void 
   const customValid = customN >= limits.min && customN <= limits.max;
   const qty = isCustom ? customN : amount;
   const valid = !isCustom || customValid;
-  const price = valid ? priceFor(type, qty) : 0;
+  const [pk, setPk] = useState<{ kind: string; amount: number; price: number; locked: boolean }[]>([]);
+  useEffect(() => { void listPackages().then((r) => { setPk(r); const f = r.filter((x: any) => x.kind === 'views').sort((a: any, b: any) => a.amount - b.amount).find((x: any) => !x.locked); if (f) setAmount(f.amount); }).catch(() => undefined); }, []);
+  const mine = pk.filter((x) => x.kind === kind).sort((a, b) => a.amount - b.amount);
+  const amts = mine.length ? mine.map((x) => x.amount) : type.amounts;
+  const priceOf = (a: number) => { const m = mine.find((x) => x.amount === a); return m ? Math.max(1, Math.ceil(Number(m.price))) : priceFor(type, a); };
+  const lockedOf = (a: number) => !!mine.find((x) => x.amount === a)?.locked;
+  const price = valid ? priceOf(qty) : 0;
   const balance = coins ?? 0;
   const short = coins !== null && valid && price > balance;
   const fmt = (n: number) => n.toLocaleString('en-US');
-  const pick = (k: BoostKind) => { setKind(k); setAmount(BOOST_TYPES.find((t) => t.kind === k)!.amounts[0]); setCustom(''); };
+  const pick = (k: BoostKind) => { setKind(k); const l = pk.filter((x) => x.kind === k && !x.locked).sort((a, b) => a.amount - b.amount); setAmount(l.length ? l[0].amount : BOOST_TYPES.find((t) => t.kind === k)!.amounts[0]); setCustom(''); };
   const go = async () => {
     if (!valid) return;
     setBusy(true);
@@ -124,15 +131,15 @@ export function BoostSheet({ post, onClose }: { post: Post; onClose: () => void 
         <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={{ paddingHorizontal: 20, paddingVertical: 12 }}>
           <Text style={b.hint}>{`${type.example[1]} coins = ${fmt(type.example[0])} ${type.unit}`}{kind === 'liveViewers' ? ' · added to your next live' : ''}</Text>
           <View style={b.grid}>
-            {type.amounts.map((a) => {
-              const d = discountFor(type, a); const sel = amount === a;
+            {amts.map((a) => {
+              const d = mine.length ? 0 : discountFor(type, a); const sel = amount === a; const lk = lockedOf(a);
               return (
-                <Pressable key={a} testID={`boost-pkg-${a}`} onPress={() => setAmount(a)} style={[b.card, sel && b.cardOn]}>
+                <Pressable key={a} testID={`boost-pkg-${a}`} onPress={() => { if (!lk) setAmount(a); }} style={[b.card, sel && b.cardOn, lk && { opacity: 0.35 }]}>
                   {d > 0 && <Text style={b.off}>-{d}%</Text>}
                   <Text style={b.qty}>{formatNum(a)}</Text>
                   <Text style={b.unit} numberOfLines={1}>{type.unit}</Text>
                   {d > 0 && <Text style={b.strike}>{formatNum(basePriceFor(type, a))}</Text>}
-                  <Text style={b.price}>🪙 {formatNum(priceFor(type, a))}</Text>
+                  <Text style={b.price}>{lk ? '🔒' : `🪙 ${formatNum(priceOf(a))}`}</Text>
                 </Pressable>
               );
             })}

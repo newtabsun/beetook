@@ -136,7 +136,7 @@ function WebVideo({ uri, edit, width, height, onProgress, editable, sound, activ
           <Text style={{ color: '#FFA500', fontWeight: '800', marginTop: 6 }}>Tap to retry</Text>
         </Pressable>
       )}
-      {!edit?.muted && width > 120 && (
+      {false && !edit?.muted && width > 120 && (
         <Pressable testID="video-sound" accessibilityLabel={soundOn ? 'Mute' : 'Unmute'} onPress={() => setSoundOn(!soundOn)} style={s.sound}>
           <Icon name={soundOn ? 'volume' : 'mute'} size={16} />
         </Pressable>
@@ -362,7 +362,7 @@ function NativeVideo({ uri, edit, width, height, onProgress, editable, sound, ac
   return (
     <EditedFrame edit={edit} width={width} height={height} time={now} editable={editable} ui={<>
       <Controls width={width} now={now} dur={dur} paused={paused} onToggle={toggle} onSeek={seek} tap={width > 120} />
-      {!edit?.muted && width > 120 && (
+      {false && !edit?.muted && width > 120 && (
         <Pressable accessibilityLabel={soundOn ? 'Mute' : 'Unmute'} onPress={() => setSoundOn(!soundOn)} style={s.sound}>
           <Icon name={soundOn ? 'volume' : 'mute'} size={16} />
         </Pressable>
@@ -464,11 +464,6 @@ function PhotoSlideshow({ sources: full, edit, width, height, active }: { source
   return (
     <EditedFrame edit={edit} width={width} height={height} ui={big ? (<>
       <Controls width={width} now={now} dur={dur} paused={paused} onToggle={() => setPaused((p) => !p)} onSeek={seek} tap />
-      {url && (
-        <Pressable testID="slideshow-sound" accessibilityLabel={soundOn ? 'Mute' : 'Unmute'} onPress={() => setSoundOn(!soundOn)} style={s.sound}>
-          <Icon name={soundOn ? 'volume' : 'mute'} size={16} />
-        </Pressable>
-      )}
     </>) : undefined}>
       <Theme105Stage sources={sources} themeId={edit?.themeId ?? DEFAULT_THEME_ID} seconds={edit?.seconds ?? 2} width={w} playing={run} clock={clock} />
       {loading && (

@@ -30,6 +30,8 @@ export function friendlyError(e: unknown): string {
   if (text && ![MSG_OFFLINE, MSG_WEAK, MSG_GENERIC].includes(msg)) console.warn('[error]', text);
   if (!getNetwork().online) return MSG_OFFLINE;
   if (/going live needs vip/i.test(text)) return LIVE_DENIED_MESSAGE;
+  const blk = /(LIVE|POST)_BLOCKED:\s*([^"\\\n]*)/.exec(text);
+  if (blk) return `${blk[1] === 'LIVE' ? 'Going live' : 'Posting'} is blocked by Bee Took.${blk[2].trim() ? ` Reason: ${blk[2].trim()}` : ''}`;
   if (OFFLINE_RE.test(text)) { reportNetIssue(); return MSG_OFFLINE; }
   if (WEAK_RE.test(text)) { reportNetIssue(); return MSG_WEAK; }
   if ([MSG_OFFLINE, MSG_WEAK, MSG_GENERIC].includes(msg)) return msg;

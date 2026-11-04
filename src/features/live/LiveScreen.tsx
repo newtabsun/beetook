@@ -3,7 +3,8 @@ import { friendlyError } from '../../lib/errors';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useState } from 'react';
 import { Image } from '../../components/CachedImage';
-import { ActivityIndicator, Alert, FlatList, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { activeBanner } from '../../lib/admin';
+import { ActivityIndicator, Alert, FlatList, Linking, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { createLiveRoom, fetchLiveRooms, initSeats, type LiveRoom } from '../../lib/api';
 import { liveAccess } from '../../lib/liveAccess';
 import { LiveAccessCard } from './LiveAccessCard';
@@ -173,6 +174,9 @@ export function LiveScreen({ autoCreate, onFull }: { autoCreate?: boolean; onFul
   }, []);
   useEffect(() => { if (autoCreate) void startCreate(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [listW, setListW] = useState(0);
+  const [banner, setBanner] = useState<{ image_url: string; link: string | null } | null>(null);
+  const [bannerRatio, setBannerRatio] = useState(3);
+  useEffect(() => { void activeBanner().then(setBanner).catch(() => undefined); }, []);
   const featuredSize = listW;
   const tileSize = listW > 0 ? Math.floor((listW - 12) / 2) : 0;
   useEffect(() => { void supabase.auth.getSession().then(({ data }) => setMe(data.session?.user.id)); }, []);
@@ -212,6 +216,11 @@ export function LiveScreen({ autoCreate, onFull }: { autoCreate?: boolean; onFul
         <Pressable onPress={() => void startCreate()} style={[s.cat, s.goLive, { backgroundColor: '#FF3B30' }]}><Icon name="radio" size={14} /><Text style={s.catT}>Go Live</Text></Pressable>
       </View>
       <TextInput value={q} onChangeText={setQ} placeholder="Search live rooms…" placeholderTextColor="rgba(255,255,255,0.35)" style={s.search} />
+      {banner && (
+        <Pressable onPress={() => { if (banner.link) void Linking.openURL(banner.link); }} style={{ marginBottom: 12 }}>
+          <Image source={{ uri: banner.image_url }} style={{ width: '100%', aspectRatio: bannerRatio, borderRadius: 8 }} resizeMode="cover" onLoad={(e: any) => { const w = e?.source?.width, h = e?.source?.height; if (w && h) setBannerRatio(w / h); }} />
+        </Pressable>
+      )}
       {rooms === null && !err ? <ActivityIndicator style={{ marginTop: 40 }} color={colors.primary} /> : featured ? (
         <View onLayout={(e) => setListW(Math.floor(e.nativeEvent.layout.width))} style={{ width: '100%' }}>
           {listW > 0 && <>

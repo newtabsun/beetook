@@ -23,7 +23,7 @@
     },
     "android": {
       "package": "com.beetook.app",
-      "versionCode": 49,
+      "versionCode": 51,
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#000000",

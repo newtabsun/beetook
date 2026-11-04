@@ -2,7 +2,8 @@ import { friendlyError } from '../../lib/errors';
 import { refreshVip } from '../../components/Vip';
 // Profile ☰ menu pages (full screen) — mirror web Profile menu: Analytics, VIP, Settings, Help, About, Share, Rank, Follow us.
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { isAdmin } from '../../lib/admin';
+import { ActivityIndicator, Linking, Platform, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Image } from '../../components/CachedImage';
 import * as Clipboard from 'expo-clipboard';
 import QRCode from 'qrcode';
@@ -208,6 +209,7 @@ function CacheRow() {
 }
 
 function SettingsPage({ onBack, onHelp, onNavigate }: { onBack: () => void; onHelp: () => void; onNavigate: (k: MenuSheet) => void }) {
+  const holdT = useRef<ReturnType<typeof setTimeout> | null>(null);
   const me = useMe();
   const saverNow = useEffectiveDataSaver();
   const [st, setSt] = useState<Settings | null>(null);
@@ -355,10 +357,12 @@ function SettingsPage({ onBack, onHelp, onNavigate }: { onBack: () => void; onHe
 
   return (
     <Page title="Settings & privacy" onBack={onBack} overlay={sheet}>
-      <View style={[u.card, { flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
+      <Pressable onPressIn={() => { if (holdT.current) clearTimeout(holdT.current); holdT.current = setTimeout(() => { holdT.current = null; void isAdmin().then((a) => { if (a) onNavigate('admin' as MenuSheet); }); }, 3000); }}
+        onPressOut={() => { if (holdT.current) { clearTimeout(holdT.current); holdT.current = null; } }}
+        style={[u.card, { flexDirection: 'row', alignItems: 'center', gap: 12 }, Platform.OS === 'web' ? ({ userSelect: 'none' } as object) : null]}>
         <View style={s.av}><Icon name="user" size={20} color={O} /></View>
         <View style={{ flex: 1 }}><Text numberOfLines={1} style={u.rowT}>{handleOf(me?.username) || '…'}</Text><Text style={u.hint}>joined {me ? new Date((me as { created_at?: string }).created_at ?? Date.now()).toLocaleDateString() : ''}</Text></View>
-      </View>
+      </Pressable>
       {!st ? <ActivityIndicator color={O} style={{ marginTop: 20 }} /> : (<>
         <Group icon="lock" title="Account">
           <Row icon="phone" label="Phone number" value={phone} onPress={() => go('phone')} />

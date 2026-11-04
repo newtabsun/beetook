@@ -4,7 +4,7 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-
 import { colors } from '../../theme';
 import { AppModal } from '../../components/AppModal';
 import { Icon } from '../../components/Icons';
-import { attachPostAuthors, fetchPostsByIds, isPartialPost, type Post } from '../../lib/api';
+import { attachPostAuthors, fetchPostsByIds, isPartialPost, onPostDeleted, type Post } from '../../lib/api';
 
 /** Grid rows carry no caption/edit: fill safe defaults if the full rows cannot be loaded (offline). */
 const withDefaults = (p: Post): Post => ({
@@ -19,6 +19,7 @@ export function FullscreenPlayer({ posts, index, onClose, onRemoved, onUser, onS
   const [h, setH] = useState(0);
   const [me, setMe] = useState<string>();
   const [list, setList] = useState(posts);
+  useEffect(() => onPostDeleted((id) => { setList((l) => l.filter((x) => x.id !== id)); onRemoved?.(id); }), [onRemoved]);
   const [activeId, setActiveId] = useState<string | null>(posts[index]?.id ?? null);
   const onViewable = useRef(({ viewableItems }: { viewableItems: { item: Post }[] }) => { if (viewableItems[0]) setActiveId(viewableItems[0].item.id); }).current;
   useEffect(() => { void supabase.auth.getSession().then(({ data }) => setMe(data.session?.user.id)); }, []);

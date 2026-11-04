@@ -7,7 +7,7 @@ import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from '
 import { ShareSheet, OwnerSheet } from './VideoSheets';
 import { ActivityIndicator, Dimensions, FlatList, Image, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useStableHeight } from './useStableHeight';
-import { fetchPostById, addComment, deleteComment, fetchCommentCount, fetchComments, fetchFeed, fetchForYou, formatNum, recordView, recordWatch, setFollow, subscribeTables, soundOf, toggleReaction, nameHtmlOf, type Comment, type Post } from '../../lib/api';
+import { isPostDeleted, onPostDeleted, fetchPostById, addComment, deleteComment, fetchCommentCount, fetchComments, fetchFeed, fetchForYou, formatNum, recordView, recordWatch, setFollow, subscribeTables, soundOf, toggleReaction, nameHtmlOf, type Comment, type Post } from '../../lib/api';
 import { supabase, T } from '../../lib/supabase';
 import { BoostSheet, GiftSheet, ReportSheet } from '../social/Sheets';
 import { loadFollowing, useFollowingIds, useIsFollowing } from '../../lib/follows';
@@ -149,7 +149,8 @@ export const Card = memo(function Card({ p: initial, height, onUser, onSound, me
   const [shareOpen, setShareOpen] = useState(false);
   const [boost, setBoost] = useState(false);
   const [shares, setShares] = useState(p.share_count ?? 0);
-  const [gone, setGone] = useState(false);
+  const [gone, setGone] = useState(() => isPostDeleted(initial.id));
+  useEffect(() => onPostDeleted((id) => { if (id === initial.id) setGone(true); }), [initial.id]);
     const [giftOpen, setGiftOpen] = useState(false);
   const [partnerOpen, setPartnerOpen] = useState(false);
   useEffect(() => { recordView(p.id).catch(() => undefined); }, [p.id]);
@@ -266,7 +267,10 @@ export function FeedScreen({ onUser, onSound, onDuet, visible = true }: { onUser
   const net = useNetwork();
   const saver = useEffectiveDataSaver();
   const downloadedOnly = useDownloadedOnly();
-  const base = tab === 'Following' ? items.filter((x) => following.has(x.user_id)) : items;
+  const base0 = tab === 'Following' ? items.filter((x) => following.has(x.user_id)) : items;
+  const [, bumpDel] = useState(0);
+  useEffect(() => onPostDeleted(() => { setItems((l) => l.filter((x) => !isPostDeleted(x.id))); setIncoming((l) => l.filter((x) => !isPostDeleted(x.id))); bumpDel((n) => n + 1); }), []);
+  const base = base0.filter((x) => !isPostDeleted(x.id));
   const shown = downloadedOnly ? base.filter((x) => x.kind === 'video' && isPlayed(x.media_urls[0])) : base;
   // Back online → leave "downloaded only" mode automatically.
   useEffect(() => { if (downloadedOnly && net.online && !net.slow) setDownloadedOnly(false); }, [downloadedOnly, net.online, net.slow]);
