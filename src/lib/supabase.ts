@@ -22,6 +22,8 @@ export const T = {
 export const RPC = {
   wallet: `${P}get_wallet`, race: `${P}place_race_wager`, gift: `${P}send_gift`, boost: `${P}boost_post`,
   grpCreate: `${P}grp_create`, grpUpdate: `${P}grp_update`, grpJoin: `${P}grp_join`, grpSend: `${P}grp_send`, grpComments: `${P}grp_set_comments`,
+  grpEdit: `${P}grp_msg_edit`, grpDel: `${P}grp_msg_delete`, grpReact: `${P}grp_react`, grpUnread: `${P}grp_unread`, grpRead: `${P}grp_mark_read`,
+  grpPin: `${P}grp_pin`, grpUnpin: `${P}grp_unpin`, grpFind: `${P}grp_find_user`, grpReplace: `${P}grp_replace_owner`, grpAddOwner: `${P}grp_add_owner`, grpRemoveOwner: `${P}grp_remove_owner`, grpDelete: `${P}grp_delete`,
   mktBalance: `${P}mkt_balance`, mktTransfer: `${P}mkt_transfer`, mktRequest: `${P}mkt_request`, mktAct: `${P}mkt_act`,
   unread: `${P}unread_counts`, markAll: `${P}mark_all_read`,
   mktInquiry: `${P}market_inquiry`, mktTimers: `${P}mkt_timers`, mktDelete: `${P}mkt_delete_item`, mktRating: `${P}mkt_seller_rating`, ensureSound: `${P}ensure_sound`,

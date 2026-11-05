@@ -661,12 +661,14 @@ export interface GroupFees { join: number; text: number; photo: number; voice: n
 export interface Group {
   id: string; owner_id: string; name: string; member_count: number; joined: boolean; description: string; photo: string;
   avatar_color: string; comments_enabled?: boolean; fee_join: number; fee_text: number; fee_photo: number; fee_voice: number;
+  co_owners?: string[]; pin_coins?: number; hidden?: boolean;
 }
-export interface GroupMessage { id: number; group_id: string; user_id: string; kind: GroupFeeKind; body: string; media: string | null; fee: number; created_at: string; author?: Post['author'] }
+export interface GroupMessage { id: number; group_id: string; user_id: string; kind: GroupFeeKind; body: string; media: string | null; fee: number; created_at: string; author?: Post['author']; edited_at?: string | null; reply_to?: number | null; like_count: number; dislike_count: number; reply_count: number }
+export interface GroupExtra { co_owners?: string[]; pin_coins?: number; hidden?: boolean }
 export interface GroupEarning { id: number; from_user: string; kind: 'join' | GroupFeeKind; coins: number; created_at: string; from?: string }
 export async function fetchGroups(): Promise<Group[]> {
   const me = await myIdOrNull();
-  const g = await supabase.from(T.groups).select('*').order('member_count', { ascending: false }).limit(100);
+  const g = await supabase.from(T.groups).select('*').order('pin_coins', { ascending: false }).order('member_count', { ascending: false }).limit(100);
   const mine = new Set<string>();
   if (me) (must(await supabase.from(T.groupMembers).select('group_id').eq('user_id', me)) as { group_id: string }[]).forEach((x) => mine.add(x.group_id));
   return (must(g) as Omit<Group, 'joined'>[]).map((x) => ({ ...x, joined: mine.has(x.id) }));
@@ -698,11 +700,37 @@ export async function fetchGroupMessages(id: string): Promise<GroupMessage[]> {
   return attachAuthors(rows);
 }
 /** Uploads media (photo or recorded voice) then sends; server charges the per-kind fee. */
-export async function sendGroupMessage(id: string, kind: GroupFeeKind, body: string, localMedia?: string): Promise<number> {
+export async function sendGroupMessage(id: string, kind: GroupFeeKind, body: string, localMedia?: string, replyTo?: number | null): Promise<number> {
   let media: string | null = null;
   if (localMedia) media = kind === 'photo' ? await uploadMedia(localMedia, 'photo') : await uploadVoice(localMedia);
-  return must(await supabase.rpc(RPC.grpSend, { p_group: id, p_kind: kind, p_body: body, p_media: media })) as number;
+  return must(await supabase.rpc(RPC.grpSend, { p_group: id, p_kind: kind, p_body: body, p_media: media, p_reply: replyTo ?? null })) as number;
 }
+export async function editGroupMessage(id: number, body: string) { must(await supabase.rpc(RPC.grpEdit, { p_id: id, p_body: body })); }
+export async function deleteGroupMessage(id: number) { must(await supabase.rpc(RPC.grpDel, { p_id: id })); }
+export async function reactGroupMessage(id: number, kind: 'like' | 'dislike'): Promise<'like' | 'dislike' | null> { return must(await supabase.rpc(RPC.grpReact, { p_msg: id, p_kind: kind })) as 'like' | 'dislike' | null; }
+export async function myGroupReactions(ids: number[]): Promise<Record<number, 'like' | 'dislike'>> {
+  if (!ids.length) return {};
+  const rows = must(await supabase.from(`${'app_9e1318caf6_'}group_msg_reactions`).select('message_id,kind').in('message_id', ids)) as { message_id: number; kind: 'like' | 'dislike' }[];
+  return Object.fromEntries(rows.map((r) => [r.message_id, r.kind]));
+}
+export async function groupReplies(parent: number): Promise<GroupMessage[]> {
+  const rows = must(await supabase.from(T.groupMessages).select('*').eq('reply_to', parent).order('created_at', { ascending: true }).limit(200)) as GroupMessage[];
+  return attachAuthors(rows);
+}
+export async function groupUnread(): Promise<Record<string, number>> {
+  const { data } = await supabase.rpc(RPC.grpUnread);
+  return Object.fromEntries(((data ?? []) as { group_id: string; n: number }[]).map((r) => [r.group_id, r.n]));
+}
+export async function markGroupRead(id: string) { await supabase.rpc(RPC.grpRead, { p_group: id }); }
+export async function pinGroup(id: string, coins: number): Promise<number> { return must(await supabase.rpc(RPC.grpPin, { p_group: id, p_coins: coins })) as number; }
+export async function unpinGroup(id: string) { must(await supabase.rpc(RPC.grpUnpin, { p_group: id })); }
+export async function findGroupUser(q: string): Promise<{ id: string; username: string | null; display_name: string | null; public_id: string | null }[]> {
+  return must(await supabase.rpc(RPC.grpFind, { p_q: q })) as never;
+}
+export async function replaceGroupOwner(id: string, user: string) { must(await supabase.rpc(RPC.grpReplace, { p_group: id, p_user: user })); }
+export async function addGroupOwner(id: string, user: string) { must(await supabase.rpc(RPC.grpAddOwner, { p_group: id, p_user: user })); }
+export async function removeGroupOwner(id: string, user: string) { must(await supabase.rpc(RPC.grpRemoveOwner, { p_group: id, p_user: user })); }
+export async function deleteGroupOwner(id: string) { must(await supabase.rpc(RPC.grpDelete, { p_group: id })); }
 export async function fetchGroupEarnings(id: string): Promise<GroupEarning[]> {
   const rows = must(await supabase.from(T.groupEarnings).select('*').eq('group_id', id).order('created_at', { ascending: false }).limit(200)) as GroupEarning[];
   const people = await profilesById([...new Set(rows.map((r) => r.from_user))]);

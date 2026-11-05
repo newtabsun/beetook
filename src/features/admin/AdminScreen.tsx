@@ -5,7 +5,7 @@ import { Btn, Chip, Field, Group, O, Page, Row, reportFail, u } from '../profile
 import * as A from '../../lib/admin';
 import { loadSocials, saveSocials } from '../../lib/menu';
 
-type Sec = null | 'redeem' | 'live' | 'post' | 'coins' | 'notify' | 'auth' | 'banner' | 'boost' | 'user' | 'social' | 'reg' | 'bgs' | 'notice';
+type Sec = null | 'redeem' | 'live' | 'post' | 'coins' | 'notify' | 'auth' | 'banner' | 'boost' | 'user' | 'social' | 'reg' | 'bgs' | 'notice' | 'groups';
 const DUR: [string, number | null][] = [['24h', 1], ['3 days', 3], ['7 days', 7], ['1 month', 30], ['Unlimited', null]];
 const fmt = (d?: string) => (d ? new Date(d).toLocaleString() : '');
 const msg = (e: unknown) => { reportFail(); Alert.alert('Admin', e instanceof Error ? e.message : String(e)); };
@@ -218,7 +218,38 @@ function Notice() {
       <Text style={u.hint}>{r.user_id ? 'One user' : 'All users'} · {fmt(r.created_at)}</Text><Btn label="Delete" danger onPress={() => A.deleteNotice(r.id).then(load).catch(msg)} /></View>))}</View>);
 }
 
+function AdminGroups() {
+  const [q, setQ] = useState(''); const [rows, setRows] = useState<any[]>([]); const [open, setOpen] = useState<any>(null); const [msgs, setMsgs] = useState<any[]>([]);
+  const load = useCallback(() => A.adminGroups(q).then(setRows).catch(msg), [q]);
+  useEffect(() => { void load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const plain = (h: string) => (h ?? '').replace(/<[^>]*>/g, '');
+  const openMsgs = (g: any) => { setOpen(g); A.adminGroupMessages(g.id).then(setMsgs).catch(msg); };
+  if (open) return (<View>
+    <Btn label="← Back to groups" onPress={() => { setOpen(null); void load(); }} />
+    <Text style={[u.h3, { marginTop: 12 }]}>{plain(open.name)} · messages</Text>
+    {msgs.map((m) => (<View key={m.id} style={[u.card, { marginTop: 8 }]}>
+      <Text style={u.hint}>@{m.username} · {fmt(m.created_at)}{m.reply_to ? ' · reply' : ''}</Text>
+      <Text style={u.rowT}>{m.kind === 'text' ? plain(m.body) : `[${m.kind}] ${m.body}`}</Text>
+      <Btn label="Delete message" danger onPress={async () => { await A.adminGroupMsgDelete(m.id); setMsgs((l) => l.filter((x) => x.id !== m.id)); }} /></View>))}
+    {!msgs.length && <Text style={[u.hint, { marginTop: 12 }]}>No messages.</Text>}
+  </View>);
+  return (<View>
+    <Field label="Search group or owner" value={q} onChangeText={setQ} onSubmitEditing={load} />
+    <Btn label="Search" onPress={load} />
+    {rows.map((g) => (<View key={g.id} style={[u.card, { marginTop: 10 }]}>
+      <Text style={u.h3}>{plain(g.name)}</Text>
+      <Text style={u.hint}>Owner @{g.owner_username} · {g.member_count} members · {g.msgs} messages{g.hidden ? ' · HIDDEN' : ''}{g.comments_enabled === false ? ' · MESSAGING OFF' : ''}</Text>
+      <Btn label="View / delete messages" onPress={() => openMsgs(g)} />
+      <Btn label={g.comments_enabled === false ? 'Turn messaging ON' : 'Turn messaging OFF'} onPress={async () => { await A.adminGroupSet(g.id, null, g.comments_enabled === false); await load(); }} />
+      <Btn label={g.hidden ? 'Show in group list' : 'Hide from group list'} onPress={async () => { await A.adminGroupSet(g.id, !g.hidden, null); await load(); }} />
+      <Btn label="Delete group" danger onPress={() => new Promise<void>((res, rej) => Alert.alert('Delete group?', 'All its messages are deleted too.', [{ text: 'Cancel', onPress: () => rej(new Error('cancelled')) }, { text: 'Delete', style: 'destructive', onPress: () => { A.adminGroupDelete(g.id).then(() => { setRows((l) => l.filter((x) => x.id !== g.id)); res(); }).catch((e) => { msg(e); rej(e); }); } }]))} />
+    </View>))}
+    {!rows.length && <Text style={[u.hint, { marginTop: 12 }]}>No groups.</Text>}
+  </View>);
+}
+
 const SECS: { k: Exclude<Sec, null>; label: string; icon: any }[] = [
+  { k: 'groups', label: 'Groups control', icon: 'users' },
   { k: 'redeem', label: 'Withdrawal requests', icon: 'wallet' }, { k: 'live', label: 'Live access', icon: 'radio' }, { k: 'post', label: 'Post access', icon: 'video' },
   { k: 'coins', label: 'Add / subtract coins', icon: 'coin' }, { k: 'notify', label: 'Send notification', icon: 'send' }, { k: 'auth', label: 'Login & sign-up access', icon: 'lock' },
   { k: 'banner', label: 'Live-list banner ad', icon: 'image' }, { k: 'boost', label: 'Boost packages', icon: 'rocket' }, { k: 'user', label: 'User lookup, analytics & posts', icon: 'user' },
@@ -228,7 +259,7 @@ const SECS: { k: Exclude<Sec, null>; label: string; icon: any }[] = [
 export default function AdminScreen({ onBack }: { onBack: () => void }) {
   const [sec, setSec] = useState<Sec>(null);
   const cur = SECS.find((x) => x.k === sec);
-  const body = { redeem: <Redeems />, live: <Access kind="live" />, post: <Access kind="post" />, auth: <Access kind="auth" />, coins: <Coins />, notify: <Notify />, banner: <Banner />, boost: <Boost />, user: <UserTools />, social: <Social />, reg: <Reg />, bgs: <Bgs />, notice: <Notice /> };
+  const body = { redeem: <Redeems />, live: <Access kind="live" />, post: <Access kind="post" />, auth: <Access kind="auth" />, coins: <Coins />, notify: <Notify />, banner: <Banner />, boost: <Boost />, user: <UserTools />, social: <Social />, reg: <Reg />, bgs: <Bgs />, notice: <Notice />, groups: <AdminGroups /> };
   return (
     <Page title={cur ? cur.label : 'Admin panel'} onBack={() => (sec ? setSec(null) : onBack())}>
       {sec ? body[sec] : <View style={u.gbox}>{SECS.map((x, i) => <Row key={x.k} icon={x.icon} label={x.label} last={i === SECS.length - 1} onPress={() => setSec(x.k)} />)}</View>}

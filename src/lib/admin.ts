@@ -60,3 +60,9 @@ export const listBgs = async () => ok(await tbl('live_bgs').select('*').order('c
 export const addBg = async (image_url: string) => ok(await tbl('live_bgs').insert({ key: 'u' + Date.now().toString(36), image_url }));
 export const replaceBg = async (id: string, image_url: string) => ok(await tbl('live_bgs').update({ image_url }).eq('id', id));
 export const deleteBg = async (id: string) => ok(await tbl('live_bgs').delete().eq('id', id));
+
+export const adminGroups = (q: string) => rpc<any[]>('adm_groups', { p_q: q });
+export const adminGroupSet = (id: string, hidden: boolean | null, comments: boolean | null) => rpc('adm_group_set', { p_group: id, p_hidden: hidden, p_comments: comments });
+export const adminGroupDelete = (id: string) => rpc('adm_group_delete', { p_group: id });
+export const adminGroupMessages = (id: string) => rpc<any[]>('adm_group_messages', { p_group: id });
+export const adminGroupMsgDelete = (id: number) => rpc('adm_group_msg_delete', { p_id: id });
