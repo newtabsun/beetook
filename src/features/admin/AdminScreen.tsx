@@ -220,6 +220,7 @@ function Notice() {
 
 function AdminGroups() {
   const [q, setQ] = useState(''); const [rows, setRows] = useState<any[]>([]); const [open, setOpen] = useState<any>(null); const [msgs, setMsgs] = useState<any[]>([]);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
   const load = useCallback(() => A.adminGroups(q).then(setRows).catch(msg), [q]);
   useEffect(() => { void load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const plain = (h: string) => (h ?? '').replace(/<[^>]*>/g, '');
@@ -242,7 +243,11 @@ function AdminGroups() {
       <Btn label="View / delete messages" onPress={() => openMsgs(g)} />
       <Btn label={g.comments_enabled === false ? 'Turn messaging ON' : 'Turn messaging OFF'} onPress={async () => { await A.adminGroupSet(g.id, null, g.comments_enabled === false); await load(); }} />
       <Btn label={g.hidden ? 'Show in group list' : 'Hide from group list'} onPress={async () => { await A.adminGroupSet(g.id, !g.hidden, null); await load(); }} />
-      <Btn label="Delete group" danger onPress={() => new Promise<void>((res, rej) => Alert.alert('Delete group?', 'All its messages are deleted too.', [{ text: 'Cancel', onPress: () => rej(new Error('cancelled')) }, { text: 'Delete', style: 'destructive', onPress: () => { A.adminGroupDelete(g.id).then(() => { setRows((l) => l.filter((x) => x.id !== g.id)); res(); }).catch((e) => { msg(e); rej(e); }); } }]))} />
+      {confirmId === g.id ? (<>
+        <Text style={[u.hint, { color: '#FF3B30' }]}>This permanently deletes the group and all its messages.</Text>
+        <Btn label="Yes, delete group" danger onPress={async () => { await A.adminGroupDelete(g.id); setConfirmId(null); setRows((l) => l.filter((x) => x.id !== g.id)); }} />
+        <Btn label="Cancel" onPress={() => setConfirmId(null)} />
+      </>) : <Btn label="Delete group" danger onPress={() => setConfirmId(g.id)} />}
     </View>))}
     {!rows.length && <Text style={[u.hint, { marginTop: 12 }]}>No groups.</Text>}
   </View>);

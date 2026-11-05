@@ -23,6 +23,7 @@ import { InboxScreen } from './src/features/inbox/InboxScreen';
 import { WalletScreen } from './src/features/wallet/WalletScreen';
 import { PartnerScreen } from './src/features/partner/PartnerScreen';
 import AdminScreen from './src/features/admin/AdminScreen';
+import { useGroupFullscreen } from './src/lib/groupFullscreen';
 import { ProfileMenuPage, type MenuSheet } from './src/features/profile/ProfileMenuSheets';
 import { GroupsScreen } from './src/features/social/GroupsScreen';
 import { MarketScreen } from './src/features/social/MarketScreen';
@@ -82,6 +83,7 @@ function Main({ userId }: { userId: string }) {
   const [chatDraft, setChatDraft] = useState<string | undefined>(undefined);
   const [chatReturn, setChatReturn] = useState<{ tab: Tab; sub: typeof sub } | null>(null);
   const kbOpen = useKeyboardHeight() > 0;
+  const groupFull = useGroupFullscreen();
   const posts = usePosts();
   const session = useSession();
   const [liveRoom, setLiveRoom] = useState<LiveRoom | null>(null);
@@ -146,7 +148,7 @@ function Main({ userId }: { userId: string }) {
         <IncomingGameInvites userId={userId || null} />
         <GiftFxHost />
       </View>
-      {!kbOpen && !liveRoom && !notesOpen && !sub && !viewUser && !sound && !(tab === 'live' && liveFull) && (
+      {!kbOpen && !liveRoom && !notesOpen && !sub && !viewUser && !sound && !groupFull && !(tab === 'live' && liveFull) && (
         <BottomNav tab={tab} onTab={(t) => { if (t === 'post') { setDuetSrc(null); setCaptured(null); return setCreateOpen(true); } if (t === 'live') setLiveCreate(0); setCaptured(null); setChatReturn(null); setTab(t); }} />
       )}
       {createOpen && (

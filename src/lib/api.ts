@@ -656,7 +656,7 @@ export async function markAllRead(): Promise<void> {
   must(await supabase.from(T.messages).update({ read: true }).eq('recipient_id', me).eq('read', false));
 }
 
-export type GroupFeeKind = 'text' | 'photo' | 'voice';
+export type GroupFeeKind = 'text' | 'photo' | 'voice' | 'video';
 export interface GroupFees { join: number; text: number; photo: number; voice: number }
 export interface Group {
   id: string; owner_id: string; name: string; member_count: number; joined: boolean; description: string; photo: string;
@@ -671,7 +671,8 @@ export async function fetchGroups(): Promise<Group[]> {
   const g = await supabase.from(T.groups).select('*').order('pin_coins', { ascending: false }).order('member_count', { ascending: false }).limit(100);
   const mine = new Set<string>();
   if (me) (must(await supabase.from(T.groupMembers).select('group_id').eq('user_id', me)) as { group_id: string }[]).forEach((x) => mine.add(x.group_id));
-  return (must(g) as Omit<Group, 'joined'>[]).map((x) => ({ ...x, joined: mine.has(x.id) }));
+  // A group the admin hid from the list stays visible only to its owners.
+  return (must(g) as Omit<Group, 'joined'>[]).filter((x) => !x.hidden || (!!me && (x.owner_id === me || !!x.co_owners?.includes(me)))).map((x) => ({ ...x, joined: mine.has(x.id) }));
 }
 export interface GroupInput { title: string; description: string; photo: string; fees: GroupFees }
 export async function createGroup(g: GroupInput): Promise<string> {
@@ -702,7 +703,7 @@ export async function fetchGroupMessages(id: string): Promise<GroupMessage[]> {
 /** Uploads media (photo or recorded voice) then sends; server charges the per-kind fee. */
 export async function sendGroupMessage(id: string, kind: GroupFeeKind, body: string, localMedia?: string, replyTo?: number | null): Promise<number> {
   let media: string | null = null;
-  if (localMedia) media = kind === 'photo' ? await uploadMedia(localMedia, 'photo') : await uploadVoice(localMedia);
+  if (localMedia) media = kind === 'photo' ? await uploadMedia(localMedia, 'photo') : kind === 'video' ? await uploadMedia(localMedia, 'video') : await uploadVoice(localMedia);
   return must(await supabase.rpc(RPC.grpSend, { p_group: id, p_kind: kind, p_body: body, p_media: media, p_reply: replyTo ?? null })) as number;
 }
 export async function editGroupMessage(id: number, body: string) { must(await supabase.rpc(RPC.grpEdit, { p_id: id, p_body: body })); }

@@ -174,7 +174,8 @@ export function RichTextInput({ value, onChange, placeholder, multiline, label, 
         ) : null}
         <TextInput
           accessibilityLabel={label ?? placeholder}
-          style={[r.pad, r.txt, isWeb ? r.inputWeb : r.input, multiline && { minHeight: 88, textAlignVertical: 'top' }]}
+          style={[r.pad, r.txt, isWeb ? r.inputWeb : r.input, multiline && { minHeight: 44, maxHeight: 110, textAlignVertical: 'top' }]}
+          scrollEnabled={multiline ? true : undefined}
           multiline={multiline}
           {...(isWeb ? { value: text } : {})}
           placeholder={placeholder}

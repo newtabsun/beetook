@@ -1,5 +1,14 @@
 // Admin panel API. Every call is enforced server-side (is_admin guard in each RPC / RLS policy).
 import * as ImagePicker from 'expo-image-picker';
+import { Linking } from 'react-native';
+
+/** Opens an admin-set link; adds https:// when the scheme is missing (Android refuses bare domains). */
+export function openLink(raw?: string | null) {
+  const t = (raw ?? '').trim();
+  if (!t) return;
+  const url = /^[a-z][a-z0-9+.-]*:/i.test(t) ? t : `https://${t.replace(/^\/+/, '')}`;
+  void Linking.openURL(url).catch(() => undefined);
+}
 import { supabase } from './supabase';
 import { uploadStickerImage, markPostDeleted } from './api';
 

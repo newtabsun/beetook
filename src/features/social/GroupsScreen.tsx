@@ -4,7 +4,9 @@ import { friendlyError } from '../../lib/errors';
 // realtime chat with photo + voice media, owner earnings and settings. Fees are charged server-side.
 import { VipAvatar, VipTag } from '../../components/Vip';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useVideoPlayer, VideoView } from 'expo-video';
+import { setGroupFullscreen } from '../../lib/groupFullscreen';
 import { Image } from '../../components/CachedImage';
 import * as ImagePicker from 'expo-image-picker';
 import { AudioModule, RecordingPresets, useAudioPlayer, useAudioRecorder } from 'expo-audio';
@@ -24,6 +26,25 @@ const PH = 'rgba(255,255,255,0.4)';
 const FEE_LABEL: Record<keyof GroupFees, string> = { join: 'Joining fee', text: 'Text message', photo: 'Photo message', voice: 'Voice message' };
 const DEFAULT_FEES: GroupFees = { join: 10, text: 1, photo: 3, voice: 5 };
 const feesOf = (g: Group): GroupFees => ({ join: g.fee_join, text: g.fee_text, photo: g.fee_photo, voice: g.fee_voice });
+const feeKey = (k: GroupFeeKind): keyof GroupFees => (k === 'video' ? 'photo' : k);
+const MAX_VIDEO = 30 * 1024 * 1024;
+
+/** Full-screen viewer for shared photos/videos (no download controls). */
+function MediaViewer({ item, onClose }: { item: { kind: 'photo' | 'video'; uri: string } | null; onClose: () => void }) {
+  return (
+    <Modal visible={!!item} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: '#000', justifyContent: 'center' }}>
+        {item?.kind === 'photo' && <Image source={{ uri: item.uri }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />}
+        {item?.kind === 'video' && <ViewerVideo uri={item.uri} />}
+        <Pressable accessibilityLabel="Close" onPress={onClose} hitSlop={10} style={{ position: 'absolute', top: 40, right: 20, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 20, padding: 8 }}><Icon name="x" size={22} color="#fff" /></Pressable>
+      </View>
+    </Modal>
+  );
+}
+function ViewerVideo({ uri }: { uri: string }) {
+  const p = useVideoPlayer(uri, (pl) => { pl.play(); });
+  return <VideoView player={p} style={{ width: '100%', height: '100%' }} nativeControls contentFit="contain" />;
+}
 const hhmm = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 type Tab = 'all' | 'mine' | 'create';
 type Screen = 'chat' | 'settings' | 'earnings';
@@ -152,11 +173,12 @@ function VoiceRecorder({ onRecorded }: { onRecorded: (uri: string, secs: number)
 const bodyHtml = (b: string) => (/<[a-z][^>]*>/i.test(b) ? b : b.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\n/g, '<br>'));
 
 /** Tiny action button with an optional counter (reply / like / dislike). */
-function Act({ icon, n, on, onPress, label }: { icon: 'comment' | 'thumbs'; n: number; on?: boolean; onPress: () => void; label: string }) {
+function Act({ icon, n, own, onPress, label }: { icon: 'comment' | 'thumbs'; n: number; own?: boolean; onPress: () => void; label: string }) {
+  const c = own ? '#000' : '#FFA500';
   return (
     <Pressable accessibilityLabel={label} onPress={onPress} hitSlop={6} style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-      <Icon name={icon} size={13} color={on ? '#000' : 'rgba(255,255,255,0.7)'} flip={label === 'Dislike'} />
-      {n > 0 && <Text style={{ color: on ? '#000' : 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: '800' }}>{n}</Text>}
+      <Icon name={icon} size={13} color={c} flip={label === 'Dislike'} />
+      {n > 0 && <Text style={{ color: c, fontSize: 11, fontWeight: '800' }}>{n}</Text>}
     </Pressable>
   );
 }
@@ -178,7 +200,16 @@ function GroupDetail({ group, me, onBack, onChanged }: { group: Group; me: strin
   const [thread, setThread] = useState<GroupMessage | null>(null);
   const [replies, setReplies] = useState<GroupMessage[]>([]);
   const [replyDraft, setReplyDraft] = useState('');
+  const [viewer, setViewer] = useState<{ kind: 'photo' | 'video'; uri: string } | null>(null);
   const scroll = useRef<FlatList<GroupMessage>>(null);
+  useEffect(() => { setGroupFullscreen(true); return () => setGroupFullscreen(false); }, []);
+  const pickVideo = async () => {
+    const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['videos'], quality: 1 });
+    if (r.canceled) return;
+    const a = r.assets[0];
+    if (a.fileSize && a.fileSize > MAX_VIDEO) { setErr('Video is larger than 30 MB'); return; }
+    void send('video', '', a.uri);
+  };
 
   const loadMsgs = useCallback(() => fetchGroupMessages(group.id).then((l) => {
     const tops = l.filter((m) => !m.reply_to); setMsgs(tops);
@@ -198,11 +229,11 @@ function GroupDetail({ group, me, onBack, onChanged }: { group: Group; me: strin
     try {
       const fee = await sendGroupMessage(group.id, kind, kind === 'text' ? body : body.trim(), media, replyTo);
       if (kind === 'text') { if (replyTo) setReplyDraft(''); else setDraft(''); }
-      setNote(fee > 0 ? `${fee} coins charged for ${FEE_LABEL[kind].toLowerCase()}` : '');
+      setNote(fee > 0 ? `${fee} coins charged for ${FEE_LABEL[feeKey(kind)].toLowerCase()}` : '');
       await loadMsgs(); loadEarn(); if (thread) await loadReplies(thread);
     } catch (e) {
       const m = (e as Error).message;
-      setErr(/insufficient/i.test(m) ? `Not enough coins — ${FEE_LABEL[kind]} is ${feesOf(group)[kind]} coins` : friendlyError(e));
+      setErr(/insufficient/i.test(m) ? `Not enough coins — ${FEE_LABEL[feeKey(kind)]} is ${feesOf(group)[feeKey(kind)]} coins` : friendlyError(e));
     } finally { setSending(false); }
   };
 
@@ -234,7 +265,7 @@ function GroupDetail({ group, me, onBack, onChanged }: { group: Group; me: strin
   };
 
   const total = earn.reduce((a, e) => a + e.coins, 0);
-  const byKind = (k: GroupFeeKind) => earn.filter((e) => e.kind === k).reduce((a, e) => a + e.coins, 0);
+  const byKind = (k: GroupFeeKind) => earn.filter((e) => feeKey(e.kind as GroupFeeKind) === k).reduce((a, e) => a + e.coins, 0);
 
   const bubble = (m: GroupMessage, inThread: boolean) => {
     const own = m.user_id === me;
@@ -250,14 +281,15 @@ function GroupDetail({ group, me, onBack, onChanged }: { group: Group; me: strin
             {own && m.kind === 'text' && <Pressable accessibilityLabel="Message options" hitSlop={8} onPress={() => setMenuFor(m)}><Icon name="more" size={16} color="#000" /></Pressable>}
             {own && m.kind !== 'text' && <Pressable accessibilityLabel="Message options" hitSlop={8} onPress={() => setMenuFor(m)}><Icon name="more" size={16} color="#000" /></Pressable>}
           </View>
-          {m.kind === 'photo' && !!m.media && <Image source={{ uri: m.media }} style={s.mImg} accessibilityLabel="Shared photo" />}
+          {m.kind === 'photo' && !!m.media && <Pressable onPress={() => setViewer({ kind: 'photo', uri: m.media ?? '' })}><Image source={{ uri: m.media }} style={s.mImg} accessibilityLabel="Shared photo" /></Pressable>}
+          {m.kind === 'video' && !!m.media && <Pressable accessibilityLabel="Play video" onPress={() => setViewer({ kind: 'video', uri: m.media ?? '' })} style={[s.mImg, { backgroundColor: '#000', alignItems: 'center', justifyContent: 'center' }]}><Icon name="play" size={34} color="#fff" /></Pressable>}
           {m.kind === 'voice' && !!m.media && <VoiceNote uri={m.media} mine={own} />}
           {!!m.body && <RichTextView html={bodyHtml(m.body)} style={{ color: fg, fontSize: 14 }} />}
           <Text style={[s.time, own && { color: 'rgba(0,0,0,0.6)', textAlign: 'right' }]}>{hhmm(m.created_at)}{m.edited_at ? ' · edited' : ''}{m.fee > 0 ? ` · ${m.fee} coins` : ''}</Text>
           <View style={{ flexDirection: 'row', gap: 16, marginTop: 4 }}>
-            {!inThread && <Act icon="comment" n={m.reply_count} label="Reply" on={own} onPress={() => { setThread(m); void loadReplies(m); }} />}
-            <Act icon="thumbs" n={m.like_count} label="Like" on={mine[m.id] === 'like' || (own && false)} onPress={() => void react(m, 'like')} />
-            <Act icon="thumbs" n={m.dislike_count} label="Dislike" on={mine[m.id] === 'dislike'} onPress={() => void react(m, 'dislike')} />
+            {!inThread && <Act icon="comment" n={m.reply_count} label="Reply" own={own} onPress={() => { setThread(m); void loadReplies(m); }} />}
+            <Act icon="thumbs" n={m.like_count} label="Like" own={own} onPress={() => void react(m, 'like')} />
+            <Act icon="thumbs" n={m.dislike_count} label="Dislike" own={own} onPress={() => void react(m, 'dislike')} />
           </View>
         </View>
       </View>
@@ -265,7 +297,8 @@ function GroupDetail({ group, me, onBack, onChanged }: { group: Group; me: strin
   };
 
   return (
-    <View style={s.detail}>
+    <View style={[s.detail, { paddingTop: 36 }]}>
+      <MediaViewer item={viewer} onClose={() => setViewer(null)} />
       <View style={s.dHead}>
         <Pressable accessibilityLabel="Back" onPress={() => (screen === 'chat' ? onBack() : setScreen('chat'))} hitSlop={8}><Icon name="back" size={22} /></Pressable>
         <GroupAvatar photo={group.photo} title={richToPlain(group.name)} color={group.avatar_color} size={36} />
@@ -295,6 +328,7 @@ function GroupDetail({ group, me, onBack, onChanged }: { group: Group; me: strin
                 {!!err && <Text style={s.err}>{err}</Text>}
                 <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginTop: 6 }}>
                   <Pressable accessibilityLabel="Send photo" style={s.iconBtn} disabled={sending} onPress={async () => { const u = await pickImage(); if (u) void send('photo', '', u); }}><Icon name="image" size={16} /></Pressable>
+                  <Pressable accessibilityLabel="Send video" style={s.iconBtn} disabled={sending} onPress={() => void pickVideo()}><Icon name="video" size={16} /></Pressable>
                   <VoiceRecorder onRecorded={(u, secs) => void send('voice', `Voice note · 0:${String(secs).padStart(2, '0')}`, u)} />
                   <View style={{ flex: 1 }}><RichTextInput multiline label="Message group" value={draft} onChange={setDraft} placeholder="Message group…" sending={sending} onSend={() => void send('text', draft)} /></View>
                 </View>
@@ -395,6 +429,7 @@ function OwnerSettings({ group, me, owner, err, setErr, onChanged, onClose, onDe
   const [busy, setBusy] = useState('');
   const [info, setInfo] = useState('');
   const [confirmDel, setConfirmDel] = useState(false);
+  const [stab, setStab] = useState<'profile' | 'more'>('profile');
   const run = async (key: string, fn: () => Promise<void>, ok: string) => {
     setBusy(key); setErr(''); setInfo('');
     try { await fn(); setInfo(`✓ ${ok}`); onChanged(); } catch (e) { setErr(`✕ ${friendlyError(e)}`); }
@@ -408,19 +443,26 @@ function OwnerSettings({ group, me, owner, err, setErr, onChanged, onClose, onDe
   );
   return (
     <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }} keyboardShouldPersistTaps="handled">
-      <Pressable accessibilityRole="switch" accessibilityState={{ checked: group.comments_enabled !== false }} testID="group-comments-toggle"
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        {([['profile', 'Profile edit'], ['more', 'More settings']] as const).map(([k, l]) => (
+          <Pressable key={k} onPress={() => setStab(k)} style={{ flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 10, backgroundColor: stab === k ? A : '#222' }}>
+            <Text style={{ color: stab === k ? '#000' : '#fff', fontWeight: '800' }}>{l}</Text>
+          </Pressable>
+        ))}
+      </View>
+      {stab === 'more' && <Pressable accessibilityRole="switch" accessibilityState={{ checked: group.comments_enabled !== false }} testID="group-comments-toggle"
         onPress={() => void run('comments', () => setGroupComments(group.id, group.comments_enabled === false), 'Updated')}
         style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 }}>
         <View style={{ flex: 1 }}><Text style={s.name}>Allow messages</Text><Text style={s.muted}>When off, members can read old messages but can't send new ones.</Text></View>
         <View style={{ width: 46, height: 26, borderRadius: 13, padding: 3, backgroundColor: group.comments_enabled !== false ? A : '#444', alignItems: group.comments_enabled !== false ? 'flex-end' : 'flex-start' }}>
           <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: '#fff' }} />
         </View>
-      </Pressable>
+      </Pressable>}
       {!!err && <Text style={s.err}>{err}</Text>}
       {!!info && <Text style={{ color: '#34C759', fontWeight: '800' }}>{info}</Text>}
-      <GroupForm color={group.avatar_color} cta="Save changes" initial={{ title: group.name, description: group.description, photo: group.photo, fees: feesOf(group) }}
-        onSubmit={async (v) => { await updateGroup(group.id, { ...v, photo: v.photo === group.photo ? '' : v.photo }); onChanged(); onClose(); }} />
-      {owner && (
+      {stab === 'profile' && <GroupForm color={group.avatar_color} cta="Save changes" initial={{ title: group.name, description: group.description, photo: group.photo, fees: feesOf(group) }}
+        onSubmit={async (v) => { await updateGroup(group.id, { ...v, photo: v.photo === group.photo ? '' : v.photo }); onChanged(); onClose(); }} />}
+      {owner && stab === 'more' && (
         <>
           <View style={s.feeBox}>
             <Text style={s.label}>Pin group to the top of the list</Text>

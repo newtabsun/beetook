@@ -23,6 +23,7 @@ const PROFILE_TTL = 5 * 60_000;
 const POSTS_TTL = 5 * 60_000;
 import { APP_VERSION, type MenuSheet } from './ProfileMenuSheets';
 import { NoticeCard } from './NoticeCard';
+import { SlideScreen } from '../../components/SlideScreen';
 import { MarqueeRich, RichTextInput, RichTextView, richToPlain } from '../../components/RichText';
 import { PublicId } from '../../components/PublicId';
 import { PartnerBadge } from '../partner/PartnerBadge';
@@ -243,10 +244,13 @@ export function ProfileScreen({ onOpenNotes, onOpen }: { onOpenNotes: () => void
       )}
 
       {menu && (
-        <Pressable style={s.sheetBg} onPress={() => setMenu(false)}>
-          <Pressable style={[s.sheet, { maxHeight: '80%' }]} onPress={() => undefined}>
-            <View style={s.grab} />
-            <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+        <SlideScreen>
+          <View style={{ flex: 1, paddingTop: 40, paddingHorizontal: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+              <Pressable accessibilityLabel="Close menu" hitSlop={10} onPress={() => setMenu(false)}><Icon name="back" size={24} color="#fff" /></Pressable>
+              <Text style={[s.rowT, { fontSize: 18, fontWeight: '800' }]}>Menu</Text>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 40 }}>
             {([
               ['wallet', 'Wallet', coins === null ? 'Coins & history' : `${formatNum(coins)} coins`, () => onOpen('wallet')],
               ['trending', 'Analytics', 'Views, followers & top videos', () => onOpen('analytics')],
@@ -268,8 +272,8 @@ export function ProfileScreen({ onOpenNotes, onOpen }: { onOpenNotes: () => void
               </Pressable>
             ))}
             </ScrollView>
-          </Pressable>
-        </Pressable>
+          </View>
+        </SlideScreen>
       )}
 
       {editing && draft && ds && (

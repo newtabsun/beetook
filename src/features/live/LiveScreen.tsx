@@ -3,7 +3,7 @@ import { friendlyError } from '../../lib/errors';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useState } from 'react';
 import { Image } from '../../components/CachedImage';
-import { activeBanner } from '../../lib/admin';
+import { activeBanner, openLink } from '../../lib/admin';
 import { ActivityIndicator, Alert, FlatList, Linking, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { createLiveRoom, fetchLiveRooms, initSeats, type LiveRoom } from '../../lib/api';
 import { liveAccess } from '../../lib/liveAccess';
@@ -217,8 +217,10 @@ export function LiveScreen({ autoCreate, onFull }: { autoCreate?: boolean; onFul
       </View>
       <TextInput value={q} onChangeText={setQ} placeholder="Search live rooms…" placeholderTextColor="rgba(255,255,255,0.35)" style={s.search} />
       {banner && (
-        <Pressable onPress={() => { if (banner.link) void Linking.openURL(banner.link); }} style={{ marginBottom: 12 }}>
-          <Image source={{ uri: banner.image_url }} style={{ width: '100%', aspectRatio: bannerRatio, borderRadius: 8 }} resizeMode="cover" onLoad={(e: any) => { const w = e?.source?.width, h = e?.source?.height; if (w && h) setBannerRatio(w / h); }} />
+        <Pressable accessibilityRole="link" onPress={() => openLink(banner.link)} style={{ marginBottom: 12 }}>
+          <View pointerEvents="none">
+            <Image source={{ uri: banner.image_url }} style={{ width: '100%', aspectRatio: bannerRatio, borderRadius: 8 }} resizeMode="cover" onLoad={(e: any) => { const w = e?.source?.width, h = e?.source?.height; if (w && h) setBannerRatio(w / h); }} />
+          </View>
         </Pressable>
       )}
       {rooms === null && !err ? <ActivityIndicator style={{ marginTop: 40 }} color={colors.primary} /> : featured ? (

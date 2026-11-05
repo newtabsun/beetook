@@ -15,6 +15,7 @@ import { colors } from '../../theme';
 import { Icon } from '../../components/Icons';
 import { RichTextInput, RichTextView, richToPlain } from '../../components/RichText';
 import { GroupsScreen } from '../social/GroupsScreen';
+import { useGroupFullscreen } from '../../lib/groupFullscreen';
 import { MarketScreen } from '../social/MarketScreen';
 import { FullscreenPlayer } from '../feed/FullscreenPlayer';
 import { useActiveInterval } from '../../lib/appActive';
@@ -271,13 +272,14 @@ export function InboxScreen({ onUser, initialPeer, initialDraft, onPeerClosed }:
       notify('Could not mark all as read', friendlyError(e));
     }
   };
+  const groupFull = useGroupFullscreen();
   return (
-    <View style={{ flex: 1, paddingTop: 12 }}>
-      <View style={s.top}>
+    <View style={{ flex: 1, paddingTop: groupFull ? 0 : 12 }}>
+      {!groupFull && <View style={s.top}>
         <Text style={s.h2}>In<Text style={{ color: colors.primary }}>box</Text></Text>
         <Pressable testID="mark-all-read" onPress={() => { if (requireSignIn()) void markAll(); }}><Text style={s.mark}>Mark all read</Text></Pressable>
-      </View>
-      <View style={s.pills}>
+      </View>}
+      {!groupFull && <View style={s.pills}>
         {TABS.map(([t, label]) => (
           <Pressable key={t} onPress={() => { if ((t === 'messages' || t === 'activity') && !requireSignIn('tab')) return; setTab(t); }} style={[s.pill, tab === t && { backgroundColor: colors.primary }]}>
             <Text style={[s.pillT, tab === t && { color: '#000', fontWeight: '900' }]}>{label}</Text>
@@ -285,7 +287,7 @@ export function InboxScreen({ onUser, initialPeer, initialDraft, onPeerClosed }:
             {t === 'activity' && <Badge count={unread.alerts} style={s.pillBadge} />}
           </Pressable>
         ))}
-      </View>
+      </View>}
       {tab === 'groups' ? <GroupsScreen onBack={() => setTab('messages')} /> : tab === 'market' ? <MarketScreen embedded onBack={() => setTab('messages')} /> : tab === 'messages' ? (
         <>
           <State loading={convos === null} error={error} empty={convos?.length === 0 && 'No messages yet.'} />
