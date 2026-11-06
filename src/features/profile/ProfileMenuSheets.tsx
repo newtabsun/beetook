@@ -3,7 +3,8 @@ import { refreshVip } from '../../components/Vip';
 // Profile ☰ menu pages (full screen) — mirror web Profile menu: Analytics, VIP, Settings, Help, About, Share, Rank, Follow us.
 import { useEffect, useRef, useState } from 'react';
 import { isAdmin } from '../../lib/admin';
-import { ActivityIndicator, Linking, Platform, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardInset } from '../../components/KeyboardInset';
 import { Image } from '../../components/CachedImage';
 import * as Clipboard from 'expo-clipboard';
 import QRCode from 'qrcode';
@@ -12,7 +13,7 @@ import { Icon, type IconName } from '../../components/Icons';
 import { notify } from '../../lib/notify';
 import { setAutoSaverOnCellular, setDataSaver, useAutoSaverOnCellular, useDataSaver, useEffectiveDataSaver } from '../../lib/network';
 import { CACHE_LIMIT_BYTES, clearMediaCache, mediaCacheBytes } from '../../lib/offline';
-import { fetchMyPosts, fetchMyProfile, formatNum, updateProfile, type Post, type Profile } from '../../lib/api';
+import { fetchMyPosts, fetchMyProfile, formatNum, liveAnalytics, updateProfile, type LiveAnalytics, type Post, type Profile } from '../../lib/api';
 import { handleOf, normalizeUsername, profileUrl } from '../../lib/username';
 import { supabase } from '../../lib/supabase';
 import { authMessage, emailChangeConfirm, emailChangeSend, loadTwoStep, setTwoStep } from '../../lib/authEmail';
@@ -48,6 +49,9 @@ function useMe() {
 }
 
 function Analytics({ onBack }: { onBack: () => void }) {
+  const [tab, setTab] = useState<'post' | 'live'>('post');
+  const [live, setLive] = useState<LiveAnalytics | null>(null);
+  useEffect(() => { if (tab === 'live' && !live) void liveAnalytics().then(setLive).catch((e) => { err(e); setLive({ lives: 0, secs: 0, peak: 0, gifts: 0, joins: 0, recent: [] }); }); }, [tab, live]);
   const [posts, setPosts] = useState<Post[] | null>(null);
   const me = useMe();
   useEffect(() => { fetchMyPosts('published').then(setPosts).catch(() => setPosts([])); }, []);
@@ -60,7 +64,33 @@ function Analytics({ onBack }: { onBack: () => void }) {
   ];
   return (
     <Page title="Dashboard" onBack={onBack}>
-      {!posts ? <ActivityIndicator color={O} /> : (
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+        {([['post', 'Post'], ['live', 'Live']] as const).map(([k, l]) => (
+          <Pressable key={k} accessibilityLabel={`${l} analytics`} onPress={() => setTab(k)} style={{ flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 10, backgroundColor: tab === k ? O : '#1C1C1E' }}>
+            <Text style={{ color: tab === k ? '#000' : '#fff', fontWeight: '800' }}>{l}</Text>
+          </Pressable>
+        ))}
+      </View>
+      {tab === 'live' ? (!live ? <ActivityIndicator color={O} /> : (
+        <>
+          <View style={s.cards}>{([
+            ['radio', String(live.lives), 'Total lives'], ['clock', `${Math.floor(live.secs / 3600)}h ${Math.floor((live.secs % 3600) / 60)}m`, 'Time live'],
+            ['eye', formatNum(live.peak), 'Best peak viewers'], ['gift', formatNum(live.gifts), 'Gift coins'], ['coin', formatNum(live.joins), 'Joining income'],
+          ] as [IconName, string, string][]).map(([ic, v, l]) => (
+            <View key={l} style={s.card}><Icon name={ic} size={16} color={O} /><Text style={s.cardV}>{v}</Text><Text style={u.hint}>{l}</Text></View>
+          ))}</View>
+          <Text style={[u.rowT, { marginTop: 18, marginBottom: 8 }]}>Recent lives</Text>
+          {live.recent.length === 0 ? <Text style={u.sub}>Go live to see live analytics.</Text> : live.recent.map((x) => (
+            <View key={x.id} style={s.top}>
+              {x.cover_url ? <Image source={{ uri: x.cover_url }} style={s.thumb} /> : <View style={s.thumb} />}
+              <View style={{ flex: 1 }}>
+                <Text numberOfLines={1} style={u.rowT}>{x.title || 'Live'}{x.is_live ? ' · LIVE' : ''}</Text>
+                <Text style={u.hint}>{new Date(x.created_at).toLocaleDateString()} · {Math.floor(x.secs / 60)} min · peak {formatNum(x.peak)} · {formatNum(x.gifts)} coins</Text>
+              </View>
+            </View>
+          ))}
+        </>
+      )) : !posts ? <ActivityIndicator color={O} /> : (
         <>
           <View style={s.cards}>{cards.map(([ic, v, l]) => (
             <View key={l} style={s.card}><Icon name={ic} size={16} color={O} /><Text style={s.cardV}>{v}</Text><Text style={u.hint}>{l}</Text></View>
@@ -419,25 +449,31 @@ function HelpPage({ onBack }: { onBack: () => void }) {
   const [text, setText] = useState('');
   const [chatOpen, setChatOpen] = useState(false);
   const loadChat = () => fetchSupport().then(setChat).catch(err);
+  useEffect(() => { if (!chatOpen) return undefined; const t = setInterval(() => { void fetchSupport().then(setChat).catch(() => undefined); }, 4000); return () => clearInterval(t); }, [chatOpen]);
   const send = async () => {
     if (!text.trim()) return;
     try { await sendSupport(text); setText(''); await loadChat(); } catch (e) { err(e); }
   };
   const sheet = chatOpen && (
-    <BottomSheet label="Support chat" onClose={() => setChatOpen(false)}>
-      <Text style={u.h3}>Support chat</Text><Text style={u.sub}>Our team replies here, usually within a few hours.</Text>
-      <View style={{ gap: 8, marginTop: 12, minHeight: 120 }}>
+    <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: '#000', paddingTop: 40 }}>
+      <KeyboardInset>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, marginBottom: 8 }}>
+        <Pressable accessibilityLabel="Close chat" hitSlop={10} onPress={() => setChatOpen(false)}><Icon name="back" size={24} color="#fff" /></Pressable>
+        <View style={{ flex: 1 }}><Text style={u.h3}>Support chat</Text><Text style={u.hint}>Our team replies here.</Text></View>
+      </View>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ gap: 8, padding: 16 }}>
         {chat === null ? <ActivityIndicator color={O} /> : chat.length === 0 ? <Text style={[u.hint, { textAlign: 'center', paddingVertical: 30 }]}>Say hi — tell us how we can help.</Text> : chat.map((m) => (
           <View key={m.id} testID="support-msg" style={[s.bubble, m.from_support ? { alignSelf: 'flex-start' } : { alignSelf: 'flex-end', backgroundColor: O }]}>
-            <Text style={{ color: m.from_support ? '#fff' : '#000', fontSize: 13 }}>{m.body}</Text>
+            <Text style={{ color: m.from_support ? '#fff' : '#000', fontSize: 14 }}>{m.body}</Text>
           </View>
         ))}
-      </View>
-      <View style={{ flexDirection: 'row', gap: 8, marginTop: 12, alignItems: 'center' }}>
+      </ScrollView>
+      <View style={{ flexDirection: 'row', gap: 8, padding: 12, alignItems: 'center' }}>
         <TextInput accessibilityLabel="Support message" value={text} onChangeText={setText} placeholder="Type a message" placeholderTextColor="rgba(255,255,255,0.35)" style={[u.input, { flex: 1 }]} onSubmitEditing={() => void send()} />
         <Pressable accessibilityLabel="Send" onPress={() => void send()} style={s.send}><Icon name="send" size={18} color="#000" /></Pressable>
       </View>
-    </BottomSheet>
+      </KeyboardInset>
+    </View>
   );
   return (
     <Page title="Help & support" onBack={onBack} overlay={sheet}>

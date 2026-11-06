@@ -71,6 +71,11 @@ export const replaceBg = async (id: string, image_url: string) => ok(await tbl('
 export const deleteBg = async (id: string) => ok(await tbl('live_bgs').delete().eq('id', id));
 
 export const adminGroups = (q: string) => rpc<any[]>('adm_groups', { p_q: q });
+export const adminLiveList = () => rpc<any[]>('adm_live_list');
+export const adminLiveRemove = (room: string, reason: string, block: boolean) => rpc('adm_live_remove', { p_room: room, p_reason: reason, p_block: block });
+export const supportThreads = () => rpc<any[]>('adm_support_threads');
+export const supportThread = (user: string) => rpc<any[]>('adm_support_thread', { p_user: user });
+export const supportReply = (user: string, body: string) => rpc('adm_support_reply', { p_user: user, p_body: body });
 export const adminGroupSet = (id: string, hidden: boolean | null, comments: boolean | null) => rpc('adm_group_set', { p_group: id, p_hidden: hidden, p_comments: comments });
 export const adminGroupDelete = (id: string) => rpc('adm_group_delete', { p_group: id });
 export const adminGroupMessages = (id: string) => rpc<any[]>('adm_group_messages', { p_group: id });

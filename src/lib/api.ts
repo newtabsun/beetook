@@ -26,7 +26,7 @@ export interface Post {
   liked?: boolean; saved?: boolean; pinned?: boolean; partner_enabled?: boolean;
 }
 export interface Comment { id: string; body: string; body_html?: string | null; parent_id?: string | null; reply_to_user?: string | null; created_at: string; user_id: string; author?: { username: string | null; display_name?: string | null; avatar_url?: string | null; links?: Record<string, string> | null } | null }
-export interface LiveRoom { id: string; host_id: string; title: string; category: string; cover_url: string | null; created_at: string; mode?: 'video' | 'audio'; layout?: 'fullscreen' | 'seats' | 'seats2' | 'seats3'; bg?: string | null; join_fee?: number; host?: { display_name: string | null; username: string | null } | null }
+export interface LiveRoom { id: string; host_id: string; title: string; category: string; cover_url: string | null; created_at: string; pin_coins?: number; mode?: 'video' | 'audio'; layout?: 'fullscreen' | 'seats' | 'seats2' | 'seats3'; bg?: string | null; join_fee?: number; host?: { display_name: string | null; username: string | null } | null }
 
 export function formatNum(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
@@ -456,9 +456,9 @@ export async function usernameAvailable(username: string): Promise<boolean> {
   return must(await supabase.rpc('app_9e1318caf6_username_available', { p_username: username })) as boolean;
 }
 
-/** Live rooms. Hosts already known from `prev` are reused, so profiles are only fetched for new hosts. */
+/** Live rooms: pinned (most coins first, earliest pin wins ties), then newest. */
 export async function fetchLiveRooms(category: string, prev?: LiveRoom[]): Promise<LiveRoom[]> {
-  let q = supabase.from(T.live).select('*').eq('is_live', true).order('created_at', { ascending: false }).limit(40);
+  let q = supabase.from(T.live).select('*').eq('is_live', true).order('pin_coins', { ascending: false }).order('pin_at', { ascending: true, nullsFirst: false }).order('created_at', { ascending: false }).limit(40);
   if (category !== 'All') q = q.eq('category', category);
   const rows = must(await q) as LiveRoom[];
   const hosts = new Map<string, LiveRoom['host']>((prev ?? []).filter((r) => r.host).map((r) => [r.host_id, r.host]));
@@ -975,7 +975,18 @@ export interface LiveSeat { room_id: string; idx: number; user_id: string | null
 export interface LiveViewer { room_id: string; user_id: string; joined_at: string; last_seen: string; kicked: boolean }
 export interface LiveRoomState {
   allow_comments: boolean; allow_gifts: boolean; auto_accept: boolean; fs_split: boolean; paused: boolean;
-  peak_viewers: number; is_live: boolean; bg?: string | null; stickers: LiveSticker[];
+  peak_viewers: number; is_live: boolean; bg?: string | null; stickers: LiveSticker[]; pin_coins?: number; removed_reason?: string | null;
+}
+export interface LivePinStatus { pin_coins: number; rank: number; top: number; need: number; live: boolean }
+export async function livePinStatus(room: string): Promise<LivePinStatus> {
+  return must(await supabase.rpc('app_9e1318caf6_live_pin_status', { p_room: room })) as LivePinStatus;
+}
+export async function livePin(room: string, coins: number): Promise<LivePinStatus> {
+  return must(await supabase.rpc('app_9e1318caf6_live_pin', { p_room: room, p_coins: coins })) as LivePinStatus;
+}
+export interface LiveAnalytics { lives: number; secs: number; peak: number; gifts: number; joins: number; recent: { id: string; title: string; cover_url: string | null; created_at: string; is_live: boolean; peak: number; secs: number; gifts: number }[] }
+export async function liveAnalytics(): Promise<LiveAnalytics> {
+  return must(await supabase.rpc('app_9e1318caf6_live_analytics')) as LiveAnalytics;
 }
 /** One text sticker and/or one image sticker. x/y are % of the screen, s is the pinch scale.
  *  `hidden` means the host took it off the live screen but it stays saved in Live settings. Old text-only rows stay valid. */

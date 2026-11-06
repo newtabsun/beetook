@@ -1,5 +1,5 @@
 import { friendlyError } from '../../lib/errors';
-import { VipAvatar, VipBadge, useIsVip } from '../../components/Vip';
+import { VipAvatar, VipBadge, useIsVip, WarnLine } from '../../components/Vip';
 import { notify } from '../../lib/notify';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -83,6 +83,7 @@ export function UserProfileScreen({ userId, onBack, onMessage, onUser }: { userI
           <View style={{ alignSelf: 'center' }}><VipAvatar userId={p.id} uri={p.avatar_url} name={p.display_name || p.username} size={84} color={colors.primary} /></View>
           <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 }}><Text style={[s.name, { textAlign: 'center' }]}>@<RichTextView html={readStyle(p).usernameHtml} style={s.name} /></Text></View>
           <PublicId p={p} />
+          <WarnLine id={p.id} />
           <Stats p={p} />
           <ActionButtons buttons={readStyle(p).actionButtons} />
           <ProfileBio st={readStyle(p)} />

@@ -15,8 +15,8 @@ import { T } from '../../lib/supabase';
 import { useActiveInterval } from '../../lib/appActive';
 import {
   endLiveRoom, fetchFriends, fetchLiveRoomById, fetchLiveRooms, fetchLiveEvents, fetchLiveEventsSince, fetchMiniProfiles, subscribeTables, fetchProfile, fetchRoomGifts, fetchRoomState, fetchSeats,
-  fetchViewers, formatNum, heartbeatViewer, initSeats, kickViewer, leaveViewer, myId, patchSeat, postLiveEvent, sendGift, setFollow, updateRoom,
-  type LiveEvent, type LiveRoom, type LiveRoomState, type LiveSticker, type LiveSeat, type LiveViewer, type MiniProfile,
+  fetchViewers, formatNum, heartbeatViewer, initSeats, kickViewer, leaveViewer, livePin, livePinStatus, myId, patchSeat, postLiveEvent, sendGift, setFollow, updateRoom,
+  type LiveEvent, type LivePinStatus, type LiveRoom, type LiveRoomState, type LiveSticker, type LiveSeat, type LiveViewer, type MiniProfile,
   nameHtmlOf,
 } from '../../lib/api';
 import { notify } from '../../lib/notify';
@@ -51,7 +51,7 @@ const handleOf = (p?: MiniProfile) => `@${p?.username || 'user'}`;
 
 type Sheet =
   | { kind: 'seat'; index: number } | { kind: 'gift'; index: number } | { kind: 'viewers' } | { kind: 'invite'; index: number }
-  | { kind: 'confirm'; title: string; body: string; action: string; run: () => void } | { kind: 'more' };
+  | { kind: 'confirm'; title: string; body: string; action: string; run: () => void } | { kind: 'more' } | { kind: 'pin' };
 type Panel = null | 'gift' | 'guest' | 'game' | 'settings' | 'share';
 
 function Action({ icon, glyph, label, badge, active, danger, fill, onPress }: { icon?: IconName; glyph?: string; label: string; badge?: number; active?: boolean; danger?: boolean; fill?: string; onPress: () => void }) {
@@ -69,6 +69,42 @@ function BottomSheet({ onClose, children }: { onClose: () => void; children: Rea
       <Pressable style={s.backdrop} onPress={onClose} />
       <View style={s.sheet}><View style={s.grab} /><ScrollView showsVerticalScrollIndicator={false}>{children}</ScrollView></View>
     </AppModal>
+  );
+}
+
+function PinSheet({ roomId, onClose }: { roomId: string; onClose: () => void }) {
+  const [st, setSt] = useState<LivePinStatus | null>(null);
+  const [coins, setCoins] = useState('');
+  const [busy, setBusy] = useState(false);
+  const load = useCallback(() => livePinStatus(roomId).then(setSt).catch(() => undefined), [roomId]);
+  useEffect(() => { void load(); return subscribeTables(`pin-${roomId}`, [{ table: T.live }], () => void load()); }, [load, roomId]);
+  useEffect(() => { const t = setInterval(() => void load(), 5000); return () => clearInterval(t); }, [load]);
+  const n = Math.floor(Number(coins) || 0);
+  const pay = async () => {
+    if (!st || busy) return;
+    if (st.pin_coins === 0 && n < 2000) { notify('Pin live', 'Pinning costs at least 2000 coins.'); return; }
+    setBusy(true);
+    try { setSt(await livePin(roomId, n)); setCoins(''); notify('Live pinned 📌', `${n} coins paid`); }
+    catch (e) { notify('Could not pin', /enough coins/i.test((e as Error).message) ? 'Not enough coins — please recharge.' : friendlyError(e)); }
+    setBusy(false);
+  };
+  return (
+    <BottomSheet onClose={onClose}>
+      <Text style={[s.h, { fontSize: 16 }]}>📌 Pin this live to the top of the live list</Text>
+      <Text style={[s.muted, { marginTop: 6 }]}>Minimum 2000 coins. The live with the most coins paid is listed first. Anyone can pin any live.</Text>
+      {st && (
+        <View style={{ marginTop: 12, gap: 4 }}>
+          <Text style={s.rowT}>Coins paid on this live: {formatNum(st.pin_coins)}</Text>
+          <Text style={s.rowT}>{st.pin_coins > 0 ? `Current position: #${st.rank}` : 'Not pinned yet'}</Text>
+          <Text style={[s.rowS, { color: OR, fontWeight: '800' }]}>{st.pin_coins > 0 && st.rank === 1 ? "You're first in the list 🎉" : `Pay at least ${formatNum(st.need)} more coins to reach #1`}</Text>
+        </View>
+      )}
+      <TextInput value={coins} onChangeText={(v) => setCoins(v.replace(/\D/g, ''))} keyboardType="numeric" placeholder={st && st.pin_coins === 0 ? 'Coins (min 2000)' : 'Coins to add'} placeholderTextColor="rgba(255,255,255,0.35)" accessibilityLabel="Pin coins"
+        style={{ marginTop: 12, backgroundColor: 'rgba(255,255,255,0.08)', color: '#fff', borderRadius: 12, paddingHorizontal: 14, height: 46 }} />
+      <Pressable accessibilityLabel="Pin live" disabled={busy || !n} onPress={() => void pay()} style={[s.btn, { backgroundColor: OR, flex: 0, height: 48, marginTop: 12 }, (busy || !n) && { opacity: 0.5 }]}>
+        {busy ? <ActivityIndicator color="#000" /> : <Text style={[s.btnW, { color: '#000' }]}>Pin live</Text>}
+      </Pressable>
+    </BottomSheet>
   );
 }
 
@@ -399,6 +435,7 @@ function LiveRoomInner({ room, onClose, others, onPick, onSwipe }: { room: LiveR
   }, [isHost, state, count, room.id]);
 
   // Viewer: room ended by host → summary.
+  useEffect(() => { if (isHost && state && state.is_live === false && state.removed_reason && !summary) { setSummary({ secs: Math.round((Date.now() - startedAt.current) / 1000) }); lk.send('live_ended', {}); } }, [isHost, state, summary]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (!isHost && state && !state.is_live && !summary) setSummary({ secs: Math.round((Date.now() - startedAt.current) / 1000) }); }, [isHost, state, summary]);
 
   const mySeat = seats.findIndex((x) => x.user_id === me && !!me);
@@ -736,8 +773,10 @@ function LiveRoomInner({ room, onClose, others, onPick, onSwipe }: { room: LiveR
         </BottomSheet>
       );
     }
+    if (sheet.kind === 'pin') return <PinSheet roomId={room.id} onClose={close} />;
     if (sheet.kind === 'more') return (
       <BottomSheet onClose={close}>
+        <Item icon="pin" label="Pin live to top" onPress={() => setSheet({ kind: 'pin' })} />
         <Item icon="send" label="Share live" onPress={() => { close(); openShare(); }} />
         {isHost && <Item icon="settings" label="Live settings" onPress={() => { close(); setPanel('settings'); }} />}
         {isHost
@@ -809,6 +848,7 @@ function LiveRoomInner({ room, onClose, others, onPick, onSwipe }: { room: LiveR
         <Pressable accessibilityLabel="Exit live" onPress={onClose} style={[s.xBtn, { position: 'absolute', top: 48, right: 16 }]}><Icon name="x" size={18} /></Pressable>
         <Image source={require('../../../assets/logo.png')} style={{ width: 64, height: 64, borderRadius: 16 }} resizeMode="contain" />
         <Text style={[s.h, { fontSize: 20, marginTop: 8 }]}>Live ended</Text>
+        {!!state?.removed_reason && <View style={{ marginTop: 10, padding: 12, borderRadius: 12, backgroundColor: 'rgba(255,59,48,0.15)', borderWidth: 1, borderColor: '#FF3B30' }}><Text style={{ color: '#FF6B5E', fontWeight: '800', textAlign: 'center' }}>Your live was ended by the admin</Text><Text style={{ color: '#fff', textAlign: 'center', marginTop: 4 }}>{state.removed_reason}</Text></View>}
         <Text style={s.muted}>Duration {Math.floor(summary.secs / 60)}m {String(summary.secs % 60).padStart(2, '0')}s</Text>
         <View style={s.stats}>
           {[['Peak viewers', formatNum(peak)], ['Likes', formatNum(likes)], ['Gifts', formatNum(gifts.reduce((a, g) => a + g.qty, 0))], ['Guests on seats', String(seats.filter((q) => q.idx > 0 && q.user_id).length)], ['Game earning', formatNum(earn.game)], ['Joining income', formatNum(earn.joining)]].map(([k, v]) => (
@@ -1059,7 +1099,7 @@ function LiveRoomInner({ room, onClose, others, onPick, onSwipe }: { room: LiveR
           {isHost && <Action icon="gamepad" label="Live games" active={panel === 'game'} onPress={() => setPanel(panel === 'game' ? null : 'game')} />}
           {!isHost && <Action icon="send" label="Share live" active={panel === 'share'} onPress={() => (panel === 'share' ? setPanel(null) : openShare())} />}
           {!isHost && <Action glyph="P" label="Partner" active={partnerOpen} onPress={() => setPartnerOpen(true)} />}
-          {isHost && <Action icon="more" label="More" onPress={() => setSheet({ kind: 'more' })} />}
+          {isHost ? <Action icon="more" label="More" onPress={() => setSheet({ kind: 'more' })} /> : <Action icon="more" label="More" onPress={() => setSheet({ kind: 'more' })} />}
         </View>)}
         {!giftsOn && !kbd && <Text style={[s.hint, { marginTop: 6 }]}>Gifts are disabled</Text>}
       </View>

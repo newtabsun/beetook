@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Image } from '../../components/CachedImage';
 import { activeBanner, openLink } from '../../lib/admin';
 import { ActivityIndicator, Alert, FlatList, Linking, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { createLiveRoom, fetchLiveRooms, initSeats, type LiveRoom } from '../../lib/api';
+import { createLiveRoom, fetchLiveRooms, initSeats, subscribeTables, type LiveRoom } from '../../lib/api';
 import { liveAccess } from '../../lib/liveAccess';
 import { LiveAccessCard } from './LiveAccessCard';
 import { LiveRoomView } from './LiveRoom';
@@ -190,6 +190,7 @@ export function LiveScreen({ autoCreate, onFull }: { autoCreate?: boolean; onFul
       void persist(LIVE_KEY, next.slice(0, PERSIST_LIMIT.live));
     } catch (e) { setErr(friendlyError(e)); }
   }), []);
+  useEffect(() => subscribeTables('live-list', [{ table: 'app_9e1318caf6_live_rooms' }], () => void load(true)), [load]);
   useEffect(() => {
     let alive = true;
     void (async () => {

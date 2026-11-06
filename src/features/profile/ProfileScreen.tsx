@@ -1,5 +1,5 @@
 import { friendlyError } from '../../lib/errors';
-import { VipAvatar, VipBadge, refreshVip, useIsVip } from '../../components/Vip';
+import { VipAvatar, VipBadge, refreshVip, useIsVip, WarnLine } from '../../components/Vip';
 import { notify } from '../../lib/notify';
 // Profile — mirrors app/frontend/src/pages/Profile.tsx, backed by Supabase profile/posts data.
 import * as ImagePicker from 'expo-image-picker';
@@ -195,6 +195,7 @@ export function ProfileScreen({ onOpenNotes, onOpen }: { onOpenNotes: () => void
           {st ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}><RichTextView html={st.nameHtml || name} style={s.barT} numberOfLines={1} />{vip && <VipBadge />}</View> : <Text style={s.barT}>Profile</Text>}
           <Pressable accessibilityLabel="Menu" style={s.hBtn} onPress={() => setMenu(true)}><Icon name="menu" size={16} color={O} /></Pressable>
         </View>
+        {!!p && <WarnLine id={p.id} />}
         {!p && !err && <ActivityIndicator color={O} />}
         <NoticeCard />
         {!!err && <Text style={{ color: '#E53935', textAlign: 'center' }}>{err}</Text>}

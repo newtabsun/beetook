@@ -14,8 +14,6 @@ export const BOOST_TYPES: BoostType[] = [
     amounts: [2, 5, 10, 20, 50, 100, 200, 500, 1e3, 2e3, 5e3, 1e4] },
   { kind: 'profileViews', tab: 'Profile views', unit: 'profile views', rate: 5, example: [20, 100],
     amounts: [20, 50, 100, 200, 500, 1e3, 2e3, 5e3, 1e4, 2e4, 5e4, 1e5] },
-  { kind: 'liveViewers', tab: 'Live viewers', unit: 'live viewers', rate: 10, example: [1, 10],
-    amounts: [10, 25, 50, 100, 250, 500, 1e3, 2e3, 5e3, 1e4, 2e4, 5e4] },
 ];
 
 export function discountFor(type: BoostType, amount: number): number {

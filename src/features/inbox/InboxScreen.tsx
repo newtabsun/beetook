@@ -319,7 +319,17 @@ export function InboxScreen({ onUser, initialPeer, initialDraft, onPeerClosed }:
             onEndReached={() => void loadMore()} onEndReachedThreshold={0.4} initialNumToRender={15} windowSize={7}
             ListFooterComponent={notes && notes.length > 0 && hasMore ? <ActivityIndicator color={colors.primary} style={{ marginVertical: 16 }} /> : null}
             renderItem={({ item }) => (
-              <Pressable accessibilityLabel={item.read ? 'Alert' : 'Unread alert'} onPress={() => openNote(item, 'row')} style={[s.row, !item.read && s.unreadRow]}>
+                <Pressable accessibilityLabel={item.read ? 'Alert' : 'Unread alert'} onPress={() => openNote(item, 'row')} style={[s.row, !item.read && s.unreadRow]}>
+                {item.kind === 'admin' ? (
+                  <>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: colors.primary, fontWeight: '900', fontSize: 15 }}>{item.text.split('\n')[0]}</Text>
+                      {!!item.text.split('\n').slice(1).join('\n').trim() && <Text style={{ color: '#fff', marginTop: 4 }}>{item.text.split('\n').slice(1).join('\n')}</Text>}
+                      <Text style={[s.muted, { marginTop: 4 }]}>System message</Text>
+                    </View>
+                    <View style={{ alignItems: 'flex-end', gap: 6 }}><Text style={s.muted}>{ago(item.created_at)}</Text>{!item.read && <View style={s.dot} />}</View>
+                  </>
+                ) : (<>
                 <Pressable accessibilityLabel="Open profile" hitSlop={6} onPress={() => openNote(item, 'actor')}><Avatar p={item.actor} /></Pressable>
                 <Text style={{ flex: 1, color: '#fff' }}>
                   {item.kind === 'boost_done' && !item.actor
@@ -329,6 +339,7 @@ export function InboxScreen({ onUser, initialPeer, initialDraft, onPeerClosed }:
                   <Text style={s.muted}>{ago(item.created_at)}</Text>
                   {!item.read && <View style={s.dot} />}
                 </View>
+                </>)}
               </Pressable>
             )} />
         </>

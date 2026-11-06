@@ -1,4 +1,5 @@
 // VIP RGB ring + badge — mirrors web UserAvatar `.vip-ring` (conic RGB, 2.4s spin) and VipExtras VipBadge.
+import { useWarningText } from '../lib/warnings';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Animated, Easing, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Stop, Circle } from 'react-native-svg';
@@ -133,15 +134,15 @@ function SpeakRing({ size }: { size: number }) {
 }
 
 /** Admin warning ring: true when the user has an active warning (public, cached per session). */
-const warnCache = new Map<string, boolean>();
 function useWarned(id?: string | null): boolean {
-  const [w, setW] = useState<boolean>(id ? warnCache.get(id) ?? false : false);
-  useEffect(() => {
-    if (!id) return;
-    if (warnCache.has(id)) { setW(warnCache.get(id)!); return; }
-    void supabase.from('app_9e1318caf6_warnings').select('user_id').eq('user_id', id).limit(1).then(({ data }) => { const v = !!data?.length; warnCache.set(id, v); setW(v); });
-  }, [id]);
-  return w;
+  return useWarningText(id) !== null;
+}
+
+/** The admin's warning text, in red, shown under a profile name. Appears/disappears live. */
+export function WarnLine({ id }: { id?: string | null }) {
+  const t = useWarningText(id);
+  if (!t) return null;
+  return <Text testID="warn-text" style={{ color: '#FF3B30', fontWeight: '800', fontSize: 13, textAlign: 'center', marginTop: 4, paddingHorizontal: 16 }}>⚠ {t}</Text>;
 }
 
 /** Avatar with web-identical VIP ring (padding = max(2, size/20)) + live ring/LIVE label or online dot. */

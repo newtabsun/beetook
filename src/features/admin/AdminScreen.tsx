@@ -5,7 +5,7 @@ import { Btn, Chip, Field, Group, O, Page, Row, reportFail, u } from '../profile
 import * as A from '../../lib/admin';
 import { loadSocials, saveSocials } from '../../lib/menu';
 
-type Sec = null | 'redeem' | 'live' | 'post' | 'coins' | 'notify' | 'auth' | 'banner' | 'boost' | 'user' | 'social' | 'reg' | 'bgs' | 'notice' | 'groups';
+type Sec = null | 'redeem' | 'live' | 'post' | 'coins' | 'notify' | 'auth' | 'banner' | 'boost' | 'user' | 'social' | 'reg' | 'bgs' | 'notice' | 'groups' | 'support';
 const DUR: [string, number | null][] = [['24h', 1], ['3 days', 3], ['7 days', 7], ['1 month', 30], ['Unlimited', null]];
 const fmt = (d?: string) => (d ? new Date(d).toLocaleString() : '');
 const msg = (e: unknown) => { reportFail(); Alert.alert('Admin', e instanceof Error ? e.message : String(e)); };
@@ -63,22 +63,62 @@ function Redeems() {
 
 function Access({ kind }: { kind: 'live' | 'post' | 'auth' }) {
   const [user, setUser] = useState<any>(null); const [reason, setReason] = useState(''); const [days, setDays] = useState<number | null>(null);
-  const [list, setList] = useState<any[]>([]);
-  const load = useCallback(() => A.listBlocks().then((l) => setList(l.filter((b) => b.kind === kind))).catch(msg), [kind]);
+  const [list, setList] = useState<any[]>([]); const [lives, setLives] = useState<any[]>([]); const [why, setWhy] = useState<Record<string, string>>({}); const [confirmRoom, setConfirmRoom] = useState<string | null>(null);
+  const load = useCallback(async () => {
+    try { setList((await A.listBlocks()).filter((b) => b.kind === kind)); if (kind === 'live') setLives(await A.adminLiveList()); } catch (e) { msg(e); }
+  }, [kind]);
   useEffect(() => { void load(); }, [load]);
-  const block = async () => { try { await A.blockAccess(kind, user?.id ?? null, reason, days); setReason(''); await load(); } catch (e) { msg(e); } };
-  const lift = async (uid: string | null) => { try { await A.unblockAccess(kind, uid); await load(); } catch (e) { msg(e); } };
+  const block = async () => { await A.blockAccess(kind, user?.id ?? null, reason, days); setReason(''); await load(); };
+  const lift = async (uid: string | null) => { await A.unblockAccess(kind, uid); await load(); };
   return (<View>
     <UserPick sel={user} onSel={setUser} optional />
     <Field label="Reason / note (shown to the user)" value={reason} onChangeText={setReason} />
     {kind === 'live' && <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>{DUR.map(([l, d]) => <Chip key={l} label={l} on={days === d} onPress={() => setDays(d)} />)}</View>}
     <Btn label={user ? 'Block this user' : 'Block ALL users'} danger onPress={block} />
+    {kind === 'live' && <Text style={u.hint}>Blocking live access also ends the user's current live at once.</Text>}
     <Text style={[u.h3, { marginTop: 18 }]}>Active blocks</Text>
     {list.map((b) => (<View key={b.id} style={[u.card, { marginTop: 8 }]}>
       <Text style={u.rowT}>{b.user_id ? `@${b.username ?? b.user_id}` : 'ALL users'}</Text>
       <Text style={u.hint}>{b.reason} · until {b.expires_at ? fmt(b.expires_at) : 'unlimited'}</Text>
       <Btn label="Allow again" onPress={() => lift(b.user_id)} /></View>))}
     {!list.length && <Text style={u.hint}>None.</Text>}
+    {kind === 'live' && (<>
+      <Text style={[u.h3, { marginTop: 18 }]}>Currently live ({lives.length})</Text>
+      <Btn label="Refresh" onPress={load} />
+      {lives.map((r) => (<View key={r.id} style={[u.card, { marginTop: 8 }]}>
+        <Text style={u.rowT}>{r.display_name || r.username} · @{r.username}</Text>
+        <Text style={u.hint}>{r.title} · {r.viewers} watching · since {fmt(r.created_at)}{r.pin_coins ? ` · 📌 ${r.pin_coins}` : ''}</Text>
+        <Field label="Reason (shown on the host's screen)" value={why[r.id] ?? ''} onChangeText={(v) => setWhy((o) => ({ ...o, [r.id]: v }))} />
+        {confirmRoom === r.id ? (<>
+          <Btn label="Yes, remove from live" danger onPress={async () => { await A.adminLiveRemove(r.id, why[r.id] ?? '', false); setConfirmRoom(null); await load(); }} />
+          <Btn label="Remove and block live access" danger onPress={async () => { await A.adminLiveRemove(r.id, why[r.id] ?? '', true); setConfirmRoom(null); await load(); }} />
+          <Btn label="Cancel" onPress={() => setConfirmRoom(null)} />
+        </>) : <Btn label="Remove from live" danger onPress={async () => { if (!(why[r.id] ?? '').trim()) throw new Error('Write a reason first'); setConfirmRoom(r.id); }} />}
+      </View>))}
+      {!lives.length && <Text style={u.hint}>Nobody is live right now.</Text>}
+    </>)}
+  </View>);
+}
+
+function Support() {
+  const [threads, setThreads] = useState<any[]>([]); const [open, setOpen] = useState<any>(null); const [msgs, setMsgs] = useState<any[]>([]); const [text, setText] = useState('');
+  const loadT = useCallback(() => A.supportThreads().then(setThreads).catch(msg), []);
+  useEffect(() => { void loadT(); }, [loadT]);
+  const loadM = useCallback((id: string) => A.supportThread(id).then(setMsgs).catch(msg), []);
+  if (open) return (<View>
+    <Btn label="← Back to conversations" onPress={() => { setOpen(null); void loadT(); }} />
+    <Text style={[u.h3, { marginTop: 12 }]}>{open.display_name || open.username} · @{open.username}</Text>
+    {msgs.map((m) => (<View key={m.id} style={[u.card, { marginTop: 8, alignSelf: m.from_support ? 'flex-end' : 'flex-start', maxWidth: '88%' }]}>
+      <Text style={u.hint}>{m.from_support ? 'Support' : 'User'} · {fmt(m.created_at)}</Text><Text style={u.rowT}>{m.body}</Text></View>))}
+    <Field label="Your reply" value={text} onChangeText={setText} multiline style={{ height: 90 }} />
+    <Btn label="Send reply" onPress={async () => { await A.supportReply(open.user_id, text); setText(''); await loadM(open.user_id); }} />
+  </View>);
+  return (<View>
+    <Btn label="Refresh" onPress={loadT} />
+    {threads.map((t) => (<Pressable key={t.user_id} style={[u.card, { marginTop: 8 }]} onPress={() => { setOpen(t); void loadM(t.user_id); }}>
+      <Text style={u.h3}>{t.display_name || t.username} · @{t.username}{t.waiting ? '  ● waiting for reply' : ''}</Text>
+      <Text style={u.hint} numberOfLines={2}>{t.last_body} · {fmt(t.last_at)}</Text></Pressable>))}
+    {!threads.length && <Text style={[u.hint, { marginTop: 12 }]}>No support messages.</Text>}
   </View>);
 }
 
@@ -129,7 +169,7 @@ function Boost() {
   useEffect(() => { void load(); }, []);
   const add = async () => { const a = Math.floor(Number(amt)); const p = Number(price); if (!a || !p) return Alert.alert('Admin', 'Amount and price required.'); try { await A.addPackage(kind, a, p); setAmt(''); setPrice(''); await load(); } catch (e) { msg(e); } };
   return (<View>
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>{['views', 'likes', 'comments', 'profileViews', 'liveViewers'].map((k) => <Chip key={k} label={k} on={kind === k} onPress={() => setKind(k)} />)}</View>
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>{['views', 'likes', 'comments', 'profileViews'].map((k) => <Chip key={k} label={k} on={kind === k} onPress={() => setKind(k)} />)}</View>
     <Field label="Amount" keyboardType="number-pad" value={amt} onChangeText={setAmt} /><Field label="Price (coins)" keyboardType="decimal-pad" value={price} onChangeText={setPrice} />
     <Btn label="Add package" onPress={add} />
     {rows.filter((r) => r.kind === kind).map((r) => <PkgRow key={r.id} r={r} reload={load} />)}
@@ -254,7 +294,7 @@ function AdminGroups() {
 }
 
 const SECS: { k: Exclude<Sec, null>; label: string; icon: any }[] = [
-  { k: 'groups', label: 'Groups control', icon: 'users' },
+  { k: 'groups', label: 'Groups control', icon: 'users' }, { k: 'support', label: 'Help & support chats', icon: 'comment' },
   { k: 'redeem', label: 'Withdrawal requests', icon: 'wallet' }, { k: 'live', label: 'Live access', icon: 'radio' }, { k: 'post', label: 'Post access', icon: 'video' },
   { k: 'coins', label: 'Add / subtract coins', icon: 'coin' }, { k: 'notify', label: 'Send notification', icon: 'send' }, { k: 'auth', label: 'Login & sign-up access', icon: 'lock' },
   { k: 'banner', label: 'Live-list banner ad', icon: 'image' }, { k: 'boost', label: 'Boost packages', icon: 'rocket' }, { k: 'user', label: 'User lookup, analytics & posts', icon: 'user' },
@@ -264,7 +304,7 @@ const SECS: { k: Exclude<Sec, null>; label: string; icon: any }[] = [
 export default function AdminScreen({ onBack }: { onBack: () => void }) {
   const [sec, setSec] = useState<Sec>(null);
   const cur = SECS.find((x) => x.k === sec);
-  const body = { redeem: <Redeems />, live: <Access kind="live" />, post: <Access kind="post" />, auth: <Access kind="auth" />, coins: <Coins />, notify: <Notify />, banner: <Banner />, boost: <Boost />, user: <UserTools />, social: <Social />, reg: <Reg />, bgs: <Bgs />, notice: <Notice />, groups: <AdminGroups /> };
+  const body = { redeem: <Redeems />, live: <Access kind="live" />, post: <Access kind="post" />, auth: <Access kind="auth" />, coins: <Coins />, notify: <Notify />, banner: <Banner />, boost: <Boost />, user: <UserTools />, social: <Social />, reg: <Reg />, bgs: <Bgs />, notice: <Notice />, groups: <AdminGroups />, support: <Support /> };
   return (
     <Page title={cur ? cur.label : 'Admin panel'} onBack={() => (sec ? setSec(null) : onBack())}>
       {sec ? body[sec] : <View style={u.gbox}>{SECS.map((x, i) => <Row key={x.k} icon={x.icon} label={x.label} last={i === SECS.length - 1} onPress={() => setSec(x.k)} />)}</View>}

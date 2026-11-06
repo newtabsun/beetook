@@ -573,7 +573,7 @@ export function GroupsScreen({ onBack, initialGroupId }: { onBack: () => void; i
           {list !== null && visible.length === 0 && <Text style={[s.muted, { textAlign: 'center', paddingVertical: 40, fontSize: 14 }]}>{qt ? 'No groups match your search.' : tab === 'mine' ? 'Groups you create or join will appear here.' : 'No groups yet.'}</Text>}
           {visible.map((g) => (
             <View key={g.id} style={s.row}>
-              <Pressable accessibilityLabel={`Open ${richToPlain(g.name)}`} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }} onPress={() => { if (requireSignIn()) setOpenId(g.id); }}>
+              <Pressable accessibilityLabel={`Open ${richToPlain(g.name)}`} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }} onPress={() => { if (!requireSignIn()) return; if (!g.joined && g.owner_id !== me && !g.co_owners?.includes(me)) { setError(`Join ${richToPlain(g.name)} first to open it.`); return; } setOpenId(g.id); }}>
                 <GroupAvatar photo={g.photo} title={richToPlain(g.name)} color={g.avatar_color} size={48} />
                 <View style={{ flex: 1 }}>
                   <RichTextView html={g.name} style={s.name} numberOfLines={1} />
