@@ -7,7 +7,7 @@ import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from '
 import { ShareSheet, OwnerSheet } from './VideoSheets';
 import { ActivityIndicator, Dimensions, FlatList, Image, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useStableHeight } from './useStableHeight';
-import { isPostDeleted, onPostDeleted, fetchPostById, addComment, deleteComment, fetchCommentCount, fetchComments, fetchFeed, fetchForYou, formatNum, recordView, recordWatch, setFollow, subscribeTables, soundOf, toggleReaction, nameHtmlOf, type Comment, type Post } from '../../lib/api';
+import { isPostDeleted, onPostDeleted, fetchPostById, userIdByHandle, addComment, deleteComment, fetchCommentCount, fetchComments, fetchFeed, fetchForYou, formatNum, recordView, recordWatch, setFollow, subscribeTables, soundOf, toggleReaction, nameHtmlOf, type Comment, type Post } from '../../lib/api';
 import { supabase, T } from '../../lib/supabase';
 import { BoostSheet, GiftSheet, ReportSheet } from '../social/Sheets';
 import { loadFollowing, useFollowingIds, useIsFollowing } from '../../lib/follows';
@@ -215,7 +215,7 @@ export const Card = memo(function Card({ p: initial, height, onUser, onSound, me
             Duet with {handleOf(p.edit.duet.username)}
           </Text>
         )}
-        <FeedCaption html={p.caption_html || p.caption} />
+        <FeedCaption html={p.caption_html || p.caption} onMention={(n) => void userIdByHandle(n).then((id) => { if (id) onUser(id); else notify('User not found', `@${n} does not exist.`); }).catch(() => undefined)} />
       </View>
       {partnerOpen && <PartnerJoinScreen inviterId={p.user_id} postId={p.id} onClose={() => setPartnerOpen(false)} />}
       {open && <Comments post={p} onClose={() => setOpen(false)} onCount={setComments} />}

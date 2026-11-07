@@ -4,6 +4,8 @@ import { Alert, Image, Pressable, Text, View } from 'react-native';
 import { Btn, Chip, Field, Group, O, Page, Row, reportFail, u } from '../profile/menuUi';
 import * as A from '../../lib/admin';
 import { loadSocials, saveSocials } from '../../lib/menu';
+import * as Clipboard from 'expo-clipboard';
+import { notify } from '../../lib/notify';
 
 type Sec = null | 'redeem' | 'live' | 'post' | 'coins' | 'notify' | 'auth' | 'banner' | 'boost' | 'user' | 'social' | 'reg' | 'bgs' | 'notice' | 'groups' | 'support';
 const DUR: [string, number | null][] = [['24h', 1], ['3 days', 3], ['7 days', 7], ['1 month', 30], ['Unlimited', null]];
@@ -40,9 +42,10 @@ function Redeems() {
   const load = useCallback(() => A.listRedeems(st).then(setRows).catch(msg), [st]);
   useEffect(() => { void load(); }, [load]);
   const act = async (id: string, okFlag: boolean) => {
-    if (!okFlag && !note.trim()) return Alert.alert('Admin', 'Write a rejection reason first.');
-    try { await A.setRedeem(id, okFlag, note.trim()); setNote(''); await load(); } catch (e) { msg(e); }
+    if (!okFlag && !note.trim()) throw new Error('Write a rejection reason first');
+    await A.setRedeem(id, okFlag, note.trim()); setNote(''); await load();
   };
+  const copy = (t: string) => void Clipboard.setStringAsync(t).then(() => notify('Copied'));
   return (<View>
     <View style={{ flexDirection: 'row', gap: 6, marginTop: 8 }}>{['pending', 'approved', 'rejected', 'all'].map((x) => <Chip key={x} label={x} on={st === x} onPress={() => setSt(x)} />)}</View>
     {st === 'pending' && <Field label="Reason (required to reject)" value={note} onChangeText={setNote} />}
@@ -51,7 +54,11 @@ function Redeems() {
         <Text style={u.h3}>{r.display_name || r.username} · @{r.username}</Text>
         <Text style={u.hint}>ID {r.public_id ?? ''} · {r.phone ?? ''} · {r.email ?? ''}</Text>
         <Text style={u.rowT}>{r.coins} coins → {r.net_amount} {r.currency} ({r.method}) · {r.status}</Text>
-        <Text style={u.hint}>{Object.entries(r.fields ?? {}).map(([k, v]) => `${k}: ${v}`).join(' · ')}</Text>
+        {Object.entries(r.fields ?? {}).map(([k, v]) => (
+          <Pressable key={k} accessibilityLabel={`Copy ${k}`} onPress={() => copy(String(v))} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 }}>
+            <Text style={[u.hint, { flex: 1 }]} selectable>{k}: {String(v)}</Text><Text style={{ color: O, fontWeight: '800' }}>Copy</Text>
+          </Pressable>))}
+        <Pressable onPress={() => copy(String(r.net_amount))}><Text style={{ color: O, fontWeight: '800', marginTop: 4 }}>Copy amount ({r.net_amount})</Text></Pressable>
         <Text style={u.hint}>{fmt(r.created_at)} {r.note ? `· ${r.note}` : ''}</Text>
         {(r.status === 'pending' || r.status === 'processing') && (<View style={{ flexDirection: 'row', gap: 8 }}>
           <View style={{ flex: 1 }}><Btn label="Approve" onPress={() => act(r.id, true)} /></View>

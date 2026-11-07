@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { RichTextView } from './RichText';
 
-export function FeedCaption({ html }: { html: string }) {
+export function FeedCaption({ html, onMention }: { html: string; onMention?: (name: string) => void }) {
   const [open, setOpen] = useState(false);
   const [full, setFull] = useState(0);
   const [clamped, setClamped] = useState(0);
@@ -16,7 +16,7 @@ export function FeedCaption({ html }: { html: string }) {
           <RichTextView html={html} style={s.cap} />
         </View>
         <View onLayout={(e) => !open && setClamped(e.nativeEvent.layout.height)}>
-          <RichTextView html={html} style={s.cap} numberOfLines={open ? undefined : 2} />
+          <RichTextView html={html} style={s.cap} numberOfLines={open ? undefined : 2} onMention={onMention} />
         </View>
       </View>
       {(overflow || open) && <Text style={s.more}>{open ? 'Show less' : 'Read more...'}</Text>}

@@ -7,6 +7,12 @@ import { Icon, type IconName } from '../../components/Icons';
 import { notify } from '../../lib/notify';
 import { giftSubLabel, loadGiftCatalog } from '../../lib/gifts';
 import { supabase } from '../../lib/supabase';
+import * as Clipboard from 'expo-clipboard';
+import { SvgXml } from 'react-native-svg';
+
+const USDT_LOGO = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#26A17B"/><path fill="#fff" d="M17.9 17.9v-.001c-.1.007-.62.038-1.78.038-.92 0-1.58-.027-1.81-.038v.001c-3.57-.157-6.23-.78-6.23-1.52 0-.74 2.66-1.36 6.23-1.52v2.43c.23.017.9.056 1.82.056 1.1 0 1.66-.046 1.77-.056v-2.43c3.56.16 6.22.78 6.22 1.52 0 .74-2.66 1.36-6.22 1.52m0-3.3v-2.18h4.97V9.1H9.13v3.32h4.97v2.18c-4.04.185-7.08.985-7.08 1.945s3.04 1.76 7.08 1.945v6.96h3.8v-6.96c4.03-.185 7.07-.985 7.07-1.945s-3.04-1.76-7.07-1.945"/></svg>';
+/** Fixed display of the order price: 1 stays 1, never an exchange-rate fraction. */
+const fixedAmount = (n: number) => String(Number(Number(n).toFixed(2)));
 import { authMessage, createRedeemSecure, forgotReset, forgotSend, redeemVerify } from '../../lib/authEmail';
 import {
   coinsFor, convertEarnings, formatCoins, loadWalletConfig, myRedeems, newIdempotencyKey, packCoins, packPrice, REDEEM_METHODS,
@@ -262,11 +268,19 @@ export function WalletScreen({ onBack }: { onBack: () => void }) {
     <>
       <StepHead title="Buy coins" label="Send USDT" at={buyTotal - 1} total={buyTotal} />
       <View style={s.box}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+          <SvgXml width={44} height={44} xml={USDT_LOGO} />
+          <View><Text style={u.rowT}>Tether USDT</Text><Text style={u.hint}>BEP20 · BNB Smart Chain</Text></View>
+        </View>
         <Text style={u.lbl}>Send exactly</Text>
-        <Text selectable style={s.big2}>{usdt.info.amount} {usdt.info.currency}</Text>
-        <Text style={u.lbl}>Network</Text><Text style={u.rowT}>{usdt.info.network}</Text>
-        <Text style={[u.lbl, { marginTop: 8 }]}>To address</Text><Text selectable style={s.mono}>{usdt.info.address}</Text>
-        <Text style={[u.hint, { marginTop: 8 }]}>Other networks will be lost. Coins: {formatCoins(usdt.order.coins)}.</Text>
+        <Text selectable style={s.big2}>{fixedAmount(usdt.order.amount)} {usdt.info.currency}</Text>
+        <Text style={[u.lbl, { marginTop: 8 }]}>To address</Text>
+        <Pressable accessibilityLabel="Copy address" onPress={() => void Clipboard.setStringAsync(usdt.info.address).then(() => notify('Address copied'))}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: 12 }}>
+          <Text selectable style={[s.mono, { flex: 1 }]}>{usdt.info.address}</Text>
+          <View style={{ backgroundColor: O, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 }}><Text style={{ color: '#000', fontWeight: '800', fontSize: 12 }}>Copy</Text></View>
+        </Pressable>
+        <Text style={[u.hint, { marginTop: 8 }]}>Send only USDT on the BEP20 network — other networks will be lost. Coins: {formatCoins(usdt.order.coins)}.</Text>
       </View>
       <Btn label={busy ? 'Checking…' : 'Check payment'} busy={busy} onPress={() => void verifyUsdt()} />
     </>
@@ -548,7 +562,7 @@ export function WalletScreen({ onBack }: { onBack: () => void }) {
           </View>
           <View style={{ alignItems: 'flex-end' }}>
             <Text style={{ color: t.kind === 'in' ? '#22C55E' : '#fff', fontWeight: '800' }}>{t.category === 'convert' ? '⇄' : t.kind === 'in' ? '+' : '−'}{formatCoins(Number(t.amount))}</Text>
-            <Text style={s.tTime}>{t.status === 'pending' ? 'Pending' : t.status === 'failed' ? 'Refunded' : new Date(t.created_at).toLocaleString()}</Text>
+            <Text style={s.tTime}>{t.category === 'redeem' && t.status === 'completed' && t.kind === 'out' ? 'Completed' : t.category === 'redeem' && t.status === 'failed' ? 'Rejected' : t.status === 'pending' ? 'Pending' : t.status === 'failed' ? 'Refunded' : new Date(t.created_at).toLocaleString()}</Text>
           </View>
         </View>
       ))}

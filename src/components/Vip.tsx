@@ -142,7 +142,7 @@ function useWarned(id?: string | null): boolean {
 export function WarnLine({ id }: { id?: string | null }) {
   const t = useWarningText(id);
   if (!t) return null;
-  return <Text testID="warn-text" style={{ color: '#FF3B30', fontWeight: '800', fontSize: 13, textAlign: 'center', marginTop: 4, paddingHorizontal: 16 }}>⚠ {t}</Text>;
+  return <Text testID="warn-text" style={{ color: '#FF3B30', fontWeight: '800', fontSize: 13, textAlign: 'center', marginTop: 14, marginBottom: 6, paddingHorizontal: 16 }}>⚠ {t}</Text>;
 }
 
 /** Avatar with web-identical VIP ring (padding = max(2, size/20)) + live ring/LIVE label or online dot. */

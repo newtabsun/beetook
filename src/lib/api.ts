@@ -28,6 +28,16 @@ export interface Post {
 export interface Comment { id: string; body: string; body_html?: string | null; parent_id?: string | null; reply_to_user?: string | null; created_at: string; user_id: string; author?: { username: string | null; display_name?: string | null; avatar_url?: string | null; links?: Record<string, string> | null } | null }
 export interface LiveRoom { id: string; host_id: string; title: string; category: string; cover_url: string | null; created_at: string; pin_coins?: number; mode?: 'video' | 'audio'; layout?: 'fullscreen' | 'seats' | 'seats2' | 'seats3'; bg?: string | null; join_fee?: number; host?: { display_name: string | null; username: string | null } | null }
 
+/** Mention lookup: `@abebe` → that user's id (by handle, then by exact display name). */
+export async function userIdByHandle(name: string): Promise<string | null> {
+  const h = name.trim().replace(/^@+/, '');
+  if (!h) return null;
+  const a = await supabase.from('app_9e1318caf6_profiles').select('id').eq('username', h.toLowerCase()).maybeSingle();
+  if (a.data) return (a.data as { id: string }).id;
+  const b = await supabase.from('app_9e1318caf6_profiles').select('id').eq('display_name', h).limit(1);
+  return ((b.data as { id: string }[] | null)?.[0]?.id) ?? null;
+}
+
 export function formatNum(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, '')}K`;

@@ -1,3 +1,4 @@
+import { useSmoothProgress } from '../../lib/useSmoothProgress';
 import { friendlyError } from '../../lib/errors';
 // Full-screen overlay editor: media fills the screen, tools stack on the right edge, each opens a translucent
 // bottom panel with live preview (✓ keep / ✕ revert). Swipe = next filter. Next → Details sheet → Post.
@@ -211,8 +212,9 @@ export function OverlayEditor({ post, update, busy, progress, onBack, onPublish,
   const opts = post.options ?? DEFAULT_PUBLISH_OPTIONS;
   const schedErr = scheduleError(opts);
   const scheduleAt = parseSchedule(opts.scheduleAt) ?? undefined;
-  const captionOk = post.caption.trim().length > 0 && !schedErr;
+  const captionOk = !schedErr;
   const label = tools.find((t) => t.k === tool)?.label;
+  const shown = useSmoothProgress(progress);
 
   return (
     <View style={st.root} onLayout={(e) => { const { width, height } = e.nativeEvent.layout; if (width !== W || height !== H) setBox({ w: width, h: height }); }}>
@@ -372,7 +374,7 @@ export function OverlayEditor({ post, update, busy, progress, onBack, onPublish,
                 </View>
                 <RichTextInput label="Caption" multiline value={post.captionHtml ?? post.caption} placeholder="Write a caption… #tags @mentions"
                   onChange={(h) => update((x) => ({ ...x, captionHtml: h, caption: richToPlain(h) }))} />
-                {!post.caption.trim() && <Text style={st.muted}>Add a caption to post.</Text>}
+                {step === 1 && !post.caption.trim() && <Text style={st.muted}>Caption is optional.</Text>}
                 <PartnerToggle on={opts.partner !== false} set={(v) => update((x) => ({ ...x, options: { ...opts, partner: v } }))} />
                 <PostOptionsPanel part="cover" value={opts} onChange={(o) => update((x) => ({ ...x, options: o }))} captionHtml={post.captionHtml ?? post.caption}
                   images={isVideo ? undefined : post.sources} />
@@ -403,13 +405,13 @@ export function OverlayEditor({ post, update, busy, progress, onBack, onPublish,
             </View>
           )}
           <View style={st.flowFoot}>
-            {progress !== null && <View style={st.track}><View style={[st.fill, { width: `${progress}%` }]} /></View>}
+            {shown !== null && <View style={st.track}><View style={[st.fill, { width: `${shown}%` }]} /></View>}
             {step < 3 ? (
-              <Pressable disabled={(step === 1 && !post.caption.trim()) || (step === 2 && !!schedErr)} onPress={() => setStep(step + 1)}
-                style={[st.next, ((step === 1 && !post.caption.trim()) || (step === 2 && !!schedErr)) && { opacity: 0.45 }]}><Text style={st.nextT}>Next</Text></Pressable>
+              <Pressable disabled={step === 2 && !!schedErr} onPress={() => setStep(step + 1)}
+                style={[st.next, step === 2 && !!schedErr && { opacity: 0.45 }]}><Text style={st.nextT}>Next</Text></Pressable>
             ) : (
               <Pressable disabled={!captionOk || busy} onPress={() => onPublish(scheduleAt)} style={[st.next, (!captionOk || busy) && { opacity: 0.45 }]}>
-                {busy ? <ActivityIndicator color="#000" /> : <Text style={st.nextT}>{scheduleAt ? 'Schedule' : 'Post'}{progress !== null ? ` · ${progress}%` : ''}</Text>}
+                {busy ? <ActivityIndicator color="#000" /> : <Text style={st.nextT}>{scheduleAt ? 'Schedule' : 'Post'}{shown !== null ? ` · ${shown}%` : ''}</Text>}
               </Pressable>
             )}
           </View>

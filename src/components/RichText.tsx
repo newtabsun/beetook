@@ -82,12 +82,16 @@ function editText(segs: Seg[], next: string, typing: Fmt): Seg[] {
   return merge([...chars.slice(0, a), ...inserted, ...chars.slice(prev.length - b)]);
 }
 
-export function RichTextView({ html, style, numberOfLines }: { html: string | null | undefined; style?: TextStyle | TextStyle[]; numberOfLines?: number }) {
+export function RichTextView({ html, style, numberOfLines, onMention }: { html: string | null | undefined; style?: TextStyle | TextStyle[]; numberOfLines?: number; onMention?: (name: string) => void }) {
   const segs = parseRich(html ?? '');
   return (
     <Text style={style} numberOfLines={numberOfLines}>
       {segs.map((s, i) => (
-        <Text key={i} style={[s.c ? { color: s.c } : null, s.b ? { fontWeight: '900' } : null, s.u ? { textDecorationLine: 'underline' } : null]}>{s.t}</Text>
+        <Text key={i} style={[s.c ? { color: s.c } : null, s.b ? { fontWeight: '900' } : null, s.u ? { textDecorationLine: 'underline' } : null]}>
+          {onMention ? s.t.split(/(@[^\s@#,;:!?()]+)/).map((part, j) => (part.startsWith('@') && part.length > 1
+            ? <Text key={j} onPress={() => onMention(part.slice(1).replace(/[.]+$/, ''))} style={{ color: '#FFA500', fontWeight: '800' }}>{part}</Text>
+            : part)) : s.t}
+        </Text>
       ))}
     </Text>
   );

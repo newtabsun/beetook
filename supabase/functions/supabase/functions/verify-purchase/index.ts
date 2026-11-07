@@ -444,7 +444,7 @@ async function usdtPrepare(userId: string, body: Json) {
   const { httpStatus, body: j } = await nowCall('payment', {
     method: 'POST',
     body: JSON.stringify({
-      price_amount: Number(order.amount), price_currency: 'usd', pay_currency: nowPayCurrency(),
+      price_amount: Number(order.amount), price_currency: nowPayCurrency(), pay_currency: nowPayCurrency(),
       order_id: order.id, order_description: `${order.coins} coins`,
       ipn_callback_url: env('NOWPAYMENTS_IPN_URL') || `${env('SUPABASE_URL')}/functions/v1/verify-purchase?fn=usdt-webhook`,
     }),

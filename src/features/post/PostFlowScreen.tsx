@@ -1,3 +1,4 @@
+import { useSmoothProgress } from '../../lib/useSmoothProgress';
 import { friendlyError } from '../../lib/errors';
 // Port of Shell.tsx PostSteps: Edit → Details → Review, draft save, schedule, simulated posting.
 import * as ImagePicker from 'expo-image-picker';
@@ -30,6 +31,7 @@ export function PostFlowScreen({ mode = 'upload', initial, drafts, onPost, onDra
   const [post, setPost] = useState<PostDraft | null>(initial ? { id: `p${Date.now()}`, caption: '', ...initial } : null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
+  const shown = useSmoothProgress(progress);
   const [failed, setFailed] = useState<string | null>(null);
   const run = async (fn: () => Promise<void>) => {
     setBusy(true); setFailed(null);
@@ -99,7 +101,7 @@ export function PostFlowScreen({ mode = 'upload', initial, drafts, onPost, onDra
 
   const opts = post.options ?? DEFAULT_PUBLISH_OPTIONS;
   const schedErr = scheduleError(opts);
-  const captionOk = post.caption.trim().length > 0 && !schedErr;
+  const captionOk = !schedErr;
   const scheduleAt = parseSchedule(opts.scheduleAt) ?? undefined;
   const preview = <PostMedia kind={post.kind} sources={post.sources} edit={post.edit} width={width - 32} height={step === 2 ? 220 : 360} />;
   const saveDraft = () => run(async () => { await onDraft({ ...post, scheduleAt }); notify('Draft saved'); onClose(); });
@@ -125,7 +127,7 @@ export function PostFlowScreen({ mode = 'upload', initial, drafts, onPost, onDra
         <PartnerToggle on={opts.partner !== false} set={(v) => setPost({ ...post, options: { ...opts, partner: v } })} />
         <PostOptionsPanel value={opts} onChange={(o) => setPost({ ...post, options: o })} captionHtml={post.captionHtml ?? post.caption}
           images={post.kind === 'photos' ? post.sources : undefined} />
-        {!post.caption.trim() && <Text style={s.muted}>Add a caption to continue.</Text>}</>)}
+        {step === 1 && !post.caption.trim() && <Text style={s.muted}>Caption is optional.</Text>}</>)}
       {step === 2 && (<>{preview}
         <View style={s.review}>
           <Text style={s.muted}>CAPTION</Text><RichTextView html={post.captionHtml ?? post.caption} style={{ color: '#fff' }} numberOfLines={3} />
@@ -136,10 +138,10 @@ export function PostFlowScreen({ mode = 'upload', initial, drafts, onPost, onDra
           onClose(r === 'scheduled' ? `Scheduled for ${new Date(scheduleAt!).toLocaleString()}` : 'Posted');
         })}>{busy ? <ActivityIndicator color="#000" /> : <Text style={s.primaryT}>{failed ? 'Try again' : scheduleAt ? 'Schedule post' : 'Post'}</Text>}</Pressable>
         {!!failed && !busy && <Text testID="post-error" style={{ color: '#E53935', textAlign: 'center', fontSize: 12 }}>Upload failed: {failed}. Saved to Drafts.</Text>}
-        {progress !== null && (
+        {shown !== null && (
           <View style={{ gap: 6 }}>
-            <View style={s.track}><View style={[s.fill, { width: `${progress}%` }]} /></View>
-            <Text style={[s.muted, { textAlign: 'center' }]}>Uploading… {progress}%</Text>
+            <View style={s.track}><View style={[s.fill, { width: `${shown}%` }]} /></View>
+            <Text style={[s.muted, { textAlign: 'center' }]}>Uploading… {shown}%</Text>
           </View>
         )}</>)}
       <View style={{ flexDirection: 'row', gap: 10 }}>
