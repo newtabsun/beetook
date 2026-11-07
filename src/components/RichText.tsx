@@ -89,7 +89,7 @@ export function RichTextView({ html, style, numberOfLines, onMention }: { html: 
       {segs.map((s, i) => (
         <Text key={i} style={[s.c ? { color: s.c } : null, s.b ? { fontWeight: '900' } : null, s.u ? { textDecorationLine: 'underline' } : null]}>
           {onMention ? s.t.split(/(@[^\s@#,;:!?()]+)/).map((part, j) => (part.startsWith('@') && part.length > 1
-            ? <Text key={j} onPress={() => onMention(part.slice(1).replace(/[.]+$/, ''))} style={{ color: '#FFA500', fontWeight: '800' }}>{part}</Text>
+            ? <Text key={j} onPress={() => onMention(part.slice(1).replace(/[.]+$/, ''))} style={{ color: s.c ?? '#3B82F6', fontWeight: '800' }}>{part}</Text>
             : part)) : s.t}
         </Text>
       ))}
