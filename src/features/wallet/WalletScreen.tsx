@@ -276,9 +276,9 @@ export function WalletScreen({ onBack }: { onBack: () => void }) {
         <Text selectable style={s.big2}>{fixedAmount(usdt.order.amount)} {usdt.info.currency}</Text>
         <Text style={[u.lbl, { marginTop: 8 }]}>To address</Text>
         <Pressable accessibilityLabel="Copy address" onPress={() => void Clipboard.setStringAsync(usdt.info.address).then(() => notify('Address copied'))}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: 12 }}>
-          <Text selectable style={[s.mono, { flex: 1 }]}>{usdt.info.address}</Text>
-          <View style={{ backgroundColor: O, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 }}><Text style={{ color: '#000', fontWeight: '800', fontSize: 12 }}>Copy</Text></View>
+          style={{ backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: 12, gap: 10 }}>
+          <Text selectable style={[s.mono, { flexShrink: 1, width: '100%' }]}>{usdt.info.address}</Text>
+          <View style={{ backgroundColor: O, borderRadius: 8, paddingVertical: 8, alignItems: 'center' }}><Text style={{ color: '#000', fontWeight: '800', fontSize: 13 }}>Copy address</Text></View>
         </Pressable>
         <Text style={[u.hint, { marginTop: 8 }]}>Send only USDT on the BEP20 network — other networks will be lost. Coins: {formatCoins(usdt.order.coins)}.</Text>
       </View>
