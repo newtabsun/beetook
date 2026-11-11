@@ -9,7 +9,7 @@ import type { GooglePlayVerify, PurchaseOutcome } from './types';
 export const googlePlaySupported = true;
 
 type IapPurchase = Parameters<Parameters<typeof purchaseUpdatedListener>[0]>[0];
-const COIN_SKU = /^coins_\d+$/;
+const COIN_SKU = /^coins_\d+_01$/;
 
 let connection: Promise<boolean> | null = null;
 const connect = () => {
