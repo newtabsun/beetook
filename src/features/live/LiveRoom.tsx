@@ -327,6 +327,8 @@ function LiveRoomInner({ room, onClose, others, onPick, onSwipe }: { room: LiveR
   const inGame = !!roomGame && (roomGame.status === 'active' || roomGame.status === 'finished');
   const forfeitRef = useRef<(() => void) | null>(null);
   const [gate, setGate] = useState<{ fee: number; paid: boolean } | null>(null);
+  const [gateErr, setGateErr] = useState('');
+  const [gateTry, setGateTry] = useState(0);
   const [paying, setPaying] = useState(false);
   const [earn, setEarn] = useState({ game: 0, joining: 0 });
   const [summary, setSummary] = useState<null | { secs: number }>(null);
@@ -648,9 +650,16 @@ function LiveRoomInner({ room, onClose, others, onPick, onSwipe }: { room: LiveR
     const sub = BackHandler.addEventListener('hardwareBackPress', () => { backRef.current(); return true; });
     return () => sub.remove();
   }, []);
-  useEffect(() => { if (!me || isHost) return; void liveJoin(room.id, false).then(setGate).catch(() => setGate({ fee: 0, paid: true })); }, [me, isHost, room.id]);
+  useEffect(() => {
+    if (!me || isHost) return;
+    setGateErr('');
+    void liveJoin(room.id, false).then(setGate).catch((e) => setGateErr(friendlyError(e)));
+  }, [me, isHost, room.id, gateTry]);
   useEffect(() => { if (summary && isHost) void liveEarnings(room.id).then(setEarn).catch(() => undefined); }, [summary, isHost, room.id]);
-  const payJoin = async () => { setPaying(true); try { setGate(await liveJoin(room.id, true)); } catch (e) { notify('Could not join', friendlyError(e)); } finally { setPaying(false); } };
+  const payJoin = async () => {
+    setPaying(true); setGateErr('');
+    try { setGate(await liveJoin(room.id, true)); } catch (e) { setGateErr(friendlyError(e)); } finally { setPaying(false); }
+  };
   const leave = () => { forfeitRef.current?.(); if (onSeat) void patchSeat(room.id, seats[mySeat].idx, { user_id: null }).catch(() => undefined); onClose(); };
   const setRoom = (patch: Partial<LiveRoomState>, msg?: string) => void run(updateRoom(room.id, patch), msg);
   // Stickers: show at once, store in the room for viewers, and keep the host's kit for the next lives.
@@ -860,7 +869,7 @@ function LiveRoomInner({ room, onClose, others, onPick, onSwipe }: { room: LiveR
     );
   }
 
-  if (gate && !gate.paid && !isHost) return (
+  if (((gate && !gate.paid) || gateErr) && !isHost) return (
     <View style={[s.root, { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 }]}>
       {room.cover_url && <Image source={{ uri: room.cover_url }} style={[StyleSheet.absoluteFill, { opacity: 0.35 }]} blurRadius={12} />}
       <Pressable accessibilityLabel="Leave live" onPress={onClose} style={[s.xBtn, { position: 'absolute', top: 48, right: 16 }]}><Icon name="x" size={18} /></Pressable>
@@ -868,10 +877,19 @@ function LiveRoomInner({ room, onClose, others, onPick, onSwipe }: { room: LiveR
         <Avatar p={host} size={64} />
         <Text style={[s.h, { fontSize: 18, marginTop: 10 }]}>{hostName}</Text>
         <Text style={[s.muted, { textAlign: 'center' }]} numberOfLines={2}>{room.title}</Text>
-        <Text style={{ color: '#FFD700', fontSize: 26, fontWeight: '900', marginTop: 14 }}>🪙 {formatNum(gate.fee)}</Text>
-        <Text style={s.rowS}>One-time entry for this live</Text>
-        <Pressable disabled={paying} onPress={() => void payJoin()} style={[s.btn, { backgroundColor: OR, alignSelf: 'stretch', flex: 0, height: 48, marginTop: 18, opacity: paying ? 0.6 : 1 }]}><Text style={[s.btnW, { color: '#000' }]}>{paying ? 'Joining…' : 'Pay & join'}</Text></Pressable>
-        <Pressable onPress={onClose} style={[s.btn, { alignSelf: 'stretch', flex: 0, height: 44, marginTop: 8, backgroundColor: 'rgba(255,255,255,0.1)' }]}><Text style={s.btnW}>Not now</Text></Pressable>
+        {!!gate && <Text style={{ color: '#FFD700', fontSize: 26, fontWeight: '900', marginTop: 14 }}>🪙 {formatNum(gate.fee)}</Text>}
+        {!!gate && <Text style={s.rowS}>One-time entry for this live</Text>}
+        {!!gateErr && <Text style={{ color: '#FF6B6B', fontSize: 13, fontWeight: '700', textAlign: 'center', marginTop: 12 }}>{gateErr}</Text>}
+        {gate && !gate.paid ? (
+          <Pressable accessibilityRole="button" accessibilityLabel="Join live" disabled={paying} onPress={() => void payJoin()} style={{ alignSelf: 'stretch', height: 50, marginTop: 18, borderRadius: 99, backgroundColor: '#FFA500', alignItems: 'center', justifyContent: 'center', opacity: paying ? 0.6 : 1 }}>
+            <Text style={{ color: '#000', fontWeight: '900', fontSize: 15 }}>{paying ? 'Joining…' : `Join · 🪙 ${formatNum(gate.fee)}`}</Text>
+          </Pressable>
+        ) : (
+          <Pressable accessibilityRole="button" accessibilityLabel="Try again" onPress={() => setGateTry((n) => n + 1)} style={{ alignSelf: 'stretch', height: 50, marginTop: 18, borderRadius: 99, backgroundColor: '#FFA500', alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ color: '#000', fontWeight: '900', fontSize: 15 }}>Try again</Text>
+          </Pressable>
+        )}
+        <Pressable onPress={onClose} style={{ alignSelf: 'stretch', height: 44, marginTop: 8, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>Not now</Text></Pressable>
       </View>
     </View>
   );
