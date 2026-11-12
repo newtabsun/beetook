@@ -187,6 +187,8 @@ export function InboxScreen({ onUser, initialPeer, initialDraft, onPeerClosed }:
   }, []);
   const [error, setError] = useState('');
   const [open, setOpen] = useState<Peer | null>(initialPeer ?? null);
+  // Hooks must run on every render, before the early returns below (opening a chat or shared item).
+  const groupFull = useGroupFullscreen();
 
   // Coming back to Inbox shows the cached list at once. A quiet refresh runs only when it is old
   // (messages also update through Realtime, which forces a refresh) — no spinner over known data.
@@ -272,7 +274,6 @@ export function InboxScreen({ onUser, initialPeer, initialDraft, onPeerClosed }:
       notify('Could not mark all as read', friendlyError(e));
     }
   };
-  const groupFull = useGroupFullscreen();
   return (
     <View style={{ flex: 1, paddingTop: groupFull ? 0 : 12 }}>
       {!groupFull && <View style={s.top}>
