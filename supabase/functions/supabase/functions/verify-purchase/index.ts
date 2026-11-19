@@ -136,16 +136,18 @@ const gpFetch = async (path: string, init: RequestInit = {}) =>
 type GpProduct = {
   purchaseState?: number; purchaseType?: number; quantity?: number; obfuscatedExternalProfileId?: string; orderId?: string;
 };
-async function gpProduct(sku: string, token: string): Promise<{ ok: true; p: GpProduct } | { ok: false; status: number }> {
+async function gpProduct(sku: string, token: string): Promise<{ ok: true; p: GpProduct } | { ok: false; status: number; reason: string }> {
   const res = await gpFetch(`purchases/products/${encodeURIComponent(sku)}/tokens/${encodeURIComponent(token)}`);
-  return res.ok ? { ok: true, p: await res.json() as GpProduct } : { ok: false, status: res.status };
+  if (res.ok) return { ok: true, p: await res.json() as GpProduct };
+  const j = await res.json().catch(() => null) as { error?: { message?: string } } | null;
+  return { ok: false, status: res.status, reason: j?.error?.message ?? '' };
 }
 async function gpConsume(sku: string, token: string) {
   await gpFetch(`purchases/products/${encodeURIComponent(sku)}/tokens/${encodeURIComponent(token)}:consume`, { method: 'POST' }).catch(() => undefined);
 }
 async function gpCheckAndSettle(order: Order, token: string, mode: Mode) {
   const res = await gpProduct(order.product_id, token);
-  if (!res.ok) return { status: 'failed', message: `Google Play rejected the purchase (${res.status})` };
+  if (!res.ok) return { status: 'failed', message: `Google Play rejected the purchase (HTTP ${res.status})${res.reason ? `: ${res.reason}` : ''}` };
   const p = res.p;
   if (p.obfuscatedExternalProfileId && p.obfuscatedExternalProfileId !== order.id) return { status: 'failed', message: 'Purchase belongs to another order' };
   if (p.purchaseState === 2) return { status: 'pending', message: 'Payment is still pending in Google Play' };

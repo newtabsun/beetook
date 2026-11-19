@@ -41,11 +41,15 @@ async function callFn(slug: string, body: Record<string, unknown>): Promise<FnRe
   const { data, error } = await supabase.functions.invoke(slug, { body, headers: { 'x-client-platform': Platform.OS } });
   if (error) {
     const ctx = (error as { context?: Response }).context;
-    const detail = ctx && typeof ctx.json === 'function' ? await ctx.json().catch(() => null) as FnResult | null : null;
+    const text = ctx && typeof ctx.text === 'function' ? await ctx.text().catch(() => '') : '';
+    let detail: FnResult | null = null;
+    try { detail = text ? JSON.parse(text) as FnResult : null; } catch { detail = null; }
     if (detail?.status) return detail;
     // Function missing (404) or unreachable: report it honestly instead of failing silently.
     if (!ctx || ctx.status === 404) return NOT_DEPLOYED;
-    throw new Error(error.message);
+    // Keep the real server answer (HTTP status + message) so the payment screen can show the exact cause.
+    const why = (detail as { message?: string; error?: string } | null)?.message ?? (detail as { error?: string } | null)?.error ?? (text.slice(0, 200) || error.message);
+    throw new Error(`Server ${slug} answered HTTP ${ctx.status}: ${why}`);
   }
   return data as FnResult;
 }

@@ -160,7 +160,7 @@ export function WalletScreen({ onBack }: { onBack: () => void }) {
   const customN = Number(custom) || 0;
   const customProblem = cfg && custom ? validateCustom(cfg, provider, customN) : null;
   const limit = cfg?.purchase_limits[provider];
-  const buy = () => run(async () => {
+  const payFlow = async () => {
     const p = packs.find((x) => x.productId === pack);
     if (!p && !customOk) return notify('Choose a coin pack');
     if (!p && !custom) return notify('Choose a coin pack or enter an amount');
@@ -182,7 +182,13 @@ export function WalletScreen({ onBack }: { onBack: () => void }) {
     }
     const info = await usdtInstructions(order.id);
     if ('address' in info) { setUsdt({ order, info }); await loadAll(); } else await report(info);
-  });
+  };
+  // Payments show the exact cause (not the generic "Something went wrong") so a failure can be diagnosed.
+  const buy = () => run(() => payFlow().catch((e: unknown) => {
+    const why = e instanceof Error ? e.message : String(e);
+    console.warn('[payment]', why);
+    notify('Payment failed', why);
+  }));
   const verifyUsdt = () => run(async () => {
     if (!usdt) return;
     await report(await checkOrder(usdt.order));

@@ -56,7 +56,7 @@ export async function buyWithGooglePlay(productId: string, orderId: string, veri
       }
       void verifyAndFinish(p, orderOf(p, orderId), verify)
         .then(finish)
-        .catch((e: unknown) => finish({ status: 'failed', message: e instanceof Error ? e.message : String(e) }));
+        .catch((e: unknown) => finish({ status: 'failed', message: `Could not confirm the purchase: ${e instanceof Error ? e.message : String(e)}` }));
     });
     const failed = purchaseErrorListener((e) => {
       const code = String(e.code);
@@ -68,7 +68,7 @@ export async function buyWithGooglePlay(productId: string, orderId: string, veri
           : { status: 'failed', message: 'Google Play still has an unfinished purchase of this pack. Reopen the Wallet in a minute to restore it.' }));
         return;
       }
-      finish({ status: 'failed', message: e.message });
+      finish({ status: 'failed', message: `Google Play error (${code}): ${e.message}` });
     });
     void Promise.resolve(fetchProducts({ skus: [productId], type: 'in-app' }))
       .then((list) => {
@@ -78,6 +78,6 @@ export async function buyWithGooglePlay(productId: string, orderId: string, veri
         }
         return requestPurchase({ request: { google: { skus: [productId], obfuscatedProfileId: orderId } }, type: 'in-app' });
       })
-      .catch((e: unknown) => finish({ status: 'failed', message: e instanceof Error ? e.message : String(e) }));
+      .catch((e: unknown) => finish({ status: 'failed', message: `Could not start Google Play checkout: ${e instanceof Error ? e.message : String(e)}` }));
   });
 }
